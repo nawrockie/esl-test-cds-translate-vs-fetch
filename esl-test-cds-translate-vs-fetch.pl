@@ -20,19 +20,21 @@ use strict;
 use Getopt::Long;
 use Bio::Easel::SqFile;
 
-my $in_fafile      = "";    # input name of input file to split up, 1st cmd line arg
-my $idfetch        = "/netopt/ncbi_tools64/bin/idfetch";
-my $ndf            = 6; # number of tests run by default
-my $nall           = 9; # number of tests run if -a is used
-my $do_all         = 0; # do all used, set to '1' if -a is used
-my $do_onlyfails   = 0; # only print sequences for which there's at least one fail
-my $do_verbose     = 0; # changed to '1' with -v, output fetched and translated protein sequences
-my $do_incompletes = 0; # changed to '1' with -i, output fetched and translated protein sequences
+my $in_fafile        = "";    # input name of input file to split up, 1st cmd line arg
+my $idfetch          = "/netopt/ncbi_tools64/bin/idfetch";
+my $ndf              = 6; # number of tests run by default
+my $nall             = 9; # number of tests run if -a is used
+my $do_all           = 0; # do all used, set to '1' if -a is used
+my $do_onlyfails     = 0; # only print sequences for which there's at least one fail
+my $do_verbose       = 0; # changed to '1' with -v, output fetched and translated protein sequences
+my $do_incompletes   = 0; # changed to '1' with -i, output fetched and translated protein sequences
+my $do_compare_input = 0; # changed to '1' with -incompare, input sequences were created by dnaorg_compare_genomes.pl
 
 &GetOptions( "a" => \$do_all, 
              "f" => \$do_onlyfails, 
              "i" => \$do_incompletes,
-             "v" => \$do_verbose);
+             "v" => \$do_verbose, 
+             "incompare" => \$do_compare_input);
 
 my $usage;
 $usage  = "esl-test-cds-against-aa.pl [OPTIONS] <input fasta file output from esl-fetch-cds.pl>\n";
@@ -78,22 +80,82 @@ my $toprint;
 for(my $i = 0; $i < $nseq; $i++) { 
   # 1. fetch the CDS sequence from $in_fafile
   my ($cds_name) = $sqfile->fetch_seq_name_given_ssi_number($i);
-  # >Q09808.1:CU329670.1:822332:822429:-:CU329670.1:822489:822849:-:
-  # isolate the protein accession
-  my $prot_name = $cds_name;
-  $prot_name =~ s/^\>//;
-  $prot_name =~ s/\:.+$//;
 
   my ($cds_name2, $cds_seq) = split(/\n/, $sqfile->fetch_seq_to_fasta_string($cds_name, -1));
   $cds_name2 =~ s/^\>//;
+  my $cds_desc = $cds_name2; 
+  $cds_desc =~ s/^\S+//;
+  $cds_desc =~ s/^\s+//;
+  $cds_name2 =~ s/\s+.+$//;
+
+  # default input example:
+  # >AAC62262.1:codon_start1:AC005031.1:55514:55564:-:AC005031.1:61328:61438:-
+
+  # -incompare input:
+  # >NC_004004 NC_004004:1059:8027:+: product:pol protein protein_id:ref|NP_658990.1| codon_start:none-annotated
+  # >NC_009942 NC_009942:97:3552:+:NC_009942:3552:3683:+: product:truncated polyprotein protein_id:ref|YP_006485882.1| codon_start:none-annotated
+
   # sanity check
   if($cds_name ne $cds_name2) { die "ERROR, unexpected error, name mismatch ($cds_name ne $cds_name2)"; }
 
+  # 1. isolate the protein accession and codon_start value
+  my $prot_name;
+  my $codon_start;
+  if($do_compare_input) { 
+    $prot_name = $cds_desc;
+    # NC_004004:1059:8027:+: product:pol protein protein_id:ref|NP_658990.1| codon_start:none-annotated
+    $prot_name =~ s/^.+protein\_id\://;
+    # ref|NP_658990.1| codon_start:none-annotated
+    $prot_name =~ s/\s+.+$//;
+    # ref|NP_658990.1|
+    $prot_name =~ s/^\w+\|//;
+    # NP_658990.1|
+    $prot_name =~ s/\|.*$//;
+    # NP_658990.1
+
+    $codon_start = $cds_desc;
+    # NC_004004:1059:8027:+: product:pol protein protein_id:ref|NP_658990.1| codon_start:none-annotated
+    $codon_start =~ s/^.+codon\_start\://;
+    # none-annotated
+    $codon_start =~ s/\s+.+$//;
+    # none-annotated
+    if($codon_start eq "none-annotated") { 
+      $codon_start = 1;
+    }
+    elsif($codon_start ne "1" && $codon_start ne "2" && $codon_start ne "3") {
+      die "ERROR (-incompare) unable to parse codon_start in desc: $cds_desc";
+    }
+  }
+  else { # default case 
+    $prot_name = $cds_name;
+    # >AAC62262.1:codon_start1:AC005031.1:55514:55564:-:AC005031.1:61328:61438:-
+    $prot_name =~ s/^\>//;
+    # AAC62262.1:codon_start1:AC005031.1:55514:55564:-:AC005031.1:61328:61438:-
+    $prot_name =~ s/\:.+$//;
+    # AAC62262.1
+    
+    $codon_start = $cds_name;
+    # >AAC62262.1:codon_start1:AC005031.1:55514:55564:-:AC005031.1:61328:61438:-
+    $codon_start =~ s/^.+\:codon\_start//;
+    # 1:AC005031.1:55514:55564:-:AC005031.1:61328:61438:-
+    $codon_start =~ s/\:.+$//;
+    # 1
+    if($codon_start ne "1" && $codon_start ne "2" && $codon_start ne "3") {
+      die "ERROR (default) unable to parse codon_start in $cds_name (codon_start: $codon_start)";
+    }
+  }
+
   # 2. determine if CDS sequence is incomplete on 5' and/or 3' end
-  my ($ic_start, $ic_stop, $codon_start) = isCDSIncomplete($cds_name);
+  my ($ic_start, $ic_stop);
+  if($do_compare_input) { 
+    isCDSIncomplete($cds_desc, $do_compare_input);
+  }
+  else { #default
+    isCDSIncomplete($cds_name, $do_compare_input);
+  }
 
   # 3. translate the CDS sequence
-  my $prot_translated = translateDNA($cds_name, $cds_seq, $codon_start);
+  my $prot_translated = translateDNA($cds_seq, $codon_start);
 
   # 4. fetch the protein sequence using idfetch
   # remove 'version' from $prot_name
@@ -309,68 +371,87 @@ exit 0;
 # SUBROUTINES 
 ##############
 # Subroutine: isCDSIncomplete()
-# Args:       $cds_name: CDS sequence name
+# Args:       $cds_name_or_desc:  CDS sequence name
+#             $do_compare_input:  '1' if our input is from dnaorg_compare_genomes.pl ($cds_name_or_desc is cds desc)
+#                                 '0' for default input ($cds_name_or_desc is name)
 # Returns:    Two values:
 #             (1) $ic_start: '1' if sequence is incomplete at 'start'
 #             (2) $ic_stop:  '1' if sequence is incomplete at 'stop'
-#             (3) $codon_start: N=1|2|3, translation of CDS starts at position N
 # Dies:       If we find an incomplete character ('>' or '<') at an
-#             unexpected position or we can't parse the $cds_name
+#             unexpected position or we can't parse the $cds_name_or_desc
 #             for some other reason.
 #             
 sub isCDSIncomplete { 
   my $sub_name = "isCDSIncomplete()";
-  my $nargs_exp = 1;
+  my $nargs_exp = 2;
   if(scalar(@_) != $nargs_exp) { die "ERROR $sub_name entered with wrong number of input args"; }
 
-  my ($cds_name) = (@_);
+  my ($cds_name_or_desc, $do_compare_input) = (@_);
 
-  my $ic_start    = undef;
-  my $ic_stop     = undef;
-  my $codon_start = undef;
+  my $ic_start        = undef;
+  my $ic_stop         = undef;
+  my $codon_start     = undef;
   my $expected_strand = undef;
-  # examples
+  my $orig_cds_name_or_desc = $cds_name_or_desc;
+  
+  # Example $cds_name_or_desc values:
+  # 
+  # default ($do_compare_input == 0) examples:
   # AAH62404.1:codon_start1:BC062404.1:27:893:+:
   # AAV98535.1:codon_start1:AY680453.1:<1:>489:+:
   # AFJ92633.1:codon_start2:JQ690867.1:<1:400:+:
-  if($cds_name =~ /^\S+\.?\d*\:codon_start(\d):/) { 
-    $codon_start = $1;
-    $cds_name =~ s/^\S+\.?\d*\:codon_start\d://;
-    # remainder of cds_name is sets of 4 ':' delimited tokens
-    my @cds_name_A = split(":", $cds_name);
-    my $p = 0; 
-    my $exon = 1;
-    # determine number of exons
-    if(scalar(@cds_name_A) % 4 != 0) { die "ERROR unable to parse $cds_name while trying to determine if it is incomplete"; }
-    my $nexons = scalar(@cds_name_A) / 4;
-    for($p = 0; $p < scalar(@cds_name_A); $p+=4) { 
-      my ($paccn, $start, $stop, $strand) = ($cds_name_A[$p], $cds_name_A[($p+1)], $cds_name_A[($p+2)], $cds_name_A[($p+3)]);
-      # printf("$start..$stop\n");
-      if($start =~ /^\<\d+$/) { 
-        if($exon != 1) { die "ERROR start incomplete at exon \#$exon (should only be possible at exon 1)\n"; }
-        $ic_start = 1; 
-      }
-      elsif($start !~ m/^\d+$/) { 
-        die "ERROR, problem parsing start coordinate $start in $cds_name while trying to determine if it is incomplete"; 
-      }
-      if($stop =~ /^\>\d+$/) { 
-        if($exon != $nexons) { die "ERROR stop incomplete at exon \#$exon of $nexons (should only be possible at final exon)\n"; }
-        $ic_stop = 1; 
-      }
-      elsif($stop !~ m/^\d+$/) { 
-        die "ERROR, problem parsing stop coordinate $stop in $cds_name while trying to determine if it is incomplete"; 
-      }
-      if(! defined $expected_strand) { 
-        $expected_strand = $strand; 
-      }
-      elsif($expected_strand ne $strand) { 
-        die "ERROR, problem parsing $cds_name, multiple strands read!"; 
-      }
-      $exon++;
+  #
+  # $do_compare_input == 1 examples:
+  # NC_004004:1059:8027:+: product:pol protein protein_id:ref|NP_658990.1| codon_start:none-annotated
+  # NC_009942:97:3552:+:NC_009942:3552:3683:+: product:truncated polyprotein protein_id:ref|YP_006485882.1| codon_start:none-annotated
+  # 
+  if($do_compare_input) { 
+    #NC_004004:1059:8027:+: product:pol protein protein_id:ref|NP_658990.1| codon_start:none-annotated
+    if($cds_name_or_desc =~ s/\s+.*$//) { 
+      #NC_004004:1059:8027:+:
+      ; # expected, carry on
     }
+    else { die "ERROR, (-incompare) problem parsing $orig_cds_name_or_desc to determine if CDS is incomplete or not"; }
   }
-  else { 
-    die "ERROR, problem parsing cds_name $cds_name"; 
+  else { #default
+    #AAH62404.1:codon_start1:BC062404.1:27:893:+:
+    if($cds_name_or_desc =~ s/^\S+\.?\d*\:codon_start\d://) { 
+      #BC062404.1:27:893:+:
+      ; # expected, carry on
+    }
+    else { die "ERROR, (default) problem parsing $orig_cds_name_or_desc to determine if CDS is incomplete or not"; }
+  }
+  # remainder of cds_name is sets of 4 ':' delimited tokens
+  my @cds_name_A = split(":", $cds_name_or_desc);
+  my $p = 0; 
+  my $exon = 1;
+  # determine number of exons
+  if(scalar(@cds_name_A) % 4 != 0) { die "ERROR unable to parse $orig_cds_name_or_desc while trying to determine if it is incomplete"; }
+  my $nexons = scalar(@cds_name_A) / 4;
+  for($p = 0; $p < scalar(@cds_name_A); $p+=4) { 
+    my ($paccn, $start, $stop, $strand) = ($cds_name_A[$p], $cds_name_A[($p+1)], $cds_name_A[($p+2)], $cds_name_A[($p+3)]);
+    # printf("$start..$stop\n");
+    if($start =~ /^\<\d+$/) { 
+      if($exon != 1) { die "ERROR start incomplete at exon \#$exon (should only be possible at exon 1)\n"; }
+      $ic_start = 1; 
+    }
+    elsif($start !~ m/^\d+$/) { 
+      die "ERROR, problem parsing start coordinate $start in $orig_cds_name_or_desc while trying to determine if it is incomplete"; 
+    }
+    if($stop =~ /^\>\d+$/) { 
+      if($exon != $nexons) { die "ERROR stop incomplete at exon \#$exon of $nexons (should only be possible at final exon)\n"; }
+      $ic_stop = 1; 
+    }
+    elsif($stop !~ m/^\d+$/) { 
+      die "ERROR, problem parsing stop coordinate $stop in $orig_cds_name_or_desc while trying to determine if it is incomplete"; 
+    }
+    if(! defined $expected_strand) { 
+      $expected_strand = $strand; 
+    }
+    elsif($expected_strand ne $strand) { 
+      die "ERROR, problem parsing $orig_cds_name_or_desc, multiple strands read!"; 
+    }
+    $exon++;
   }
   if($expected_strand eq "-") { # swap $ic_start and $ic_stop
     my $tmp = $ic_start;
@@ -378,23 +459,22 @@ sub isCDSIncomplete {
     $ic_stop  = $tmp;
   }
   elsif($expected_strand ne "+") { 
-    die "ERROR, problem parsing $cds_name, no strand read"; 
+    die "ERROR, problem parsing $orig_cds_name_or_desc, no strand read"; 
   }
-  return ($ic_start, $ic_stop, $codon_start);
+  return ($ic_start, $ic_stop);
 }
 
 # Subroutine: translateDNA()
-# Args:       $cds_name: CDS sequence name
-#             $cds_seq:     CDS sequence
+# Args:       $cds_seq:     CDS sequence
 #             $codon_start: N=1|2|3, translation of CDS starts at position N
 # Returns:    translated protein sequence as a string
 #             
 sub translateDNA { 
   my $sub_name = "translateDNA()";
-  my $nargs_exp = 3;
+  my $nargs_exp = 2;
   if(scalar(@_) != $nargs_exp) { die "ERROR $sub_name entered with wrong number of input args"; }
 
-  my ($cds_name, $cds_seq, $codon_start) = (@_);
+  my ($cds_seq, $codon_start) = (@_);
   
   if($codon_start !~ /^[123]$/) { die "ERROR in translateDNA, invalid codon_start: $codon_start"; }
 
