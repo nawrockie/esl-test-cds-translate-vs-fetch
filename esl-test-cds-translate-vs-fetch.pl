@@ -25,13 +25,13 @@ my $idfetch          = "/netopt/ncbi_tools64/bin/idfetch";
 my $nsub             = 6; # number of tests run if -subset used
 my $nall             = 8; # number of total tests
 my $do_subset        = 0; # changed to '1' with -subset, do only first 6 tests, by default do all tests
-my $do_passes        = 0; # changed to '1' with -p to print sequences that pass all tests, not just those that fail >= 1
+my $do_all           = 0; # changed to '1' with -a to print all sequences, not just those that fail >= 1 test or have ambig chars
 my $do_verbose       = 0; # changed to '1' with -v, output fetched and translated protein sequences
 my $skip_incompletes = 0; # changed to '1' with -skipinc, output fetched and translated protein sequences
 my $do_compare_input = 0; # changed to '1' with -incompare, input sequences were created by dnaorg_compare_genomes.pl
 
 &GetOptions( "v"         => \$do_verbose, 
-             "p"         => \$do_passes, 
+             "a"         => \$do_all, 
              "subset"    => \$do_subset, 
              "incompare" => \$do_compare_input,
              "skipinc"   => \$skip_incompletes) || die "ERROR unknown option";
@@ -40,7 +40,7 @@ my $usage;
 $usage  = "esl-test-cds-against-aa.pl [OPTIONS] <input fasta file output from esl-fetch-cds.pl>\n";
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t-v         : be verbose; output translated and fetched protein sequences\n";
-$usage .= "\t\t-p         : print all sequences, even those that pass all tests\n";
+$usage .= "\t\t-a         : print all sequences, even those that pass all tests and have 0 ambig chars\n";
 $usage .= "\t\t-subset    : only perform first six tests, not all eight\n";
 $usage .= "\t\t-incompare : input file was created by dnaorg_compare_genomes.pl -protid -codonstart\n";
 $usage .= "\t\t-skipinc   : skip examination of incomplete CDS'\n";
@@ -62,7 +62,7 @@ my $ncomplete        = 0; # number of complete CDS, total
 my $nincomplete      = 0; # number of incomplete CDS, total
 my $ncomplete_fail   = 0; # number of complete CDS that had at least 1 failure
 my $nincomplete_fail = 0; # number of incomplete CDS that had at least 1 failure
-my $header_line = sprintf("%-22s  %11s  %5s  ", "#protein-accession", "incomplete?", "start");
+my $header_line = sprintf("%-22s  %11s  %5s  %6s  %7s  %7s  ", "#protein-accession", "incomplete?", "start", "tr-len", "num-Ns", "num-oth");
 my $last_test = ($do_subset) ? $nsub : $nall;
 for(my $i = 0; $i < $last_test; $i++) { 
   $header_line .= sprintf("   T%d", ($i+1)); 
@@ -164,7 +164,7 @@ for(my $i = 0; $i < $nseq; $i++) {
   }
 
   # 3. translate the CDS sequence
-  my $prot_translated = translateDNA($cds_seq, $codon_start);
+  my ($prot_translated, $n_N, $n_nonACGTN) = translateDNA($cds_seq, $codon_start);
 
   # 4. fetch the protein sequence using idfetch
   # remove 'version' from $prot_name
@@ -197,6 +197,7 @@ for(my $i = 0; $i < $nseq; $i++) {
   my @translated_A   = split("", $prot_translated); 
   my @fetched_A      = split("", $prot_fetched);
   my $errmsg         = "";
+  my $cds_len_to_translate = $cds_len - ($codon_start - 1);
 
   # Test: Is CDS length divisible by 3? 
   if($i == 0) { push(@testdesc_A, "Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)"); }
@@ -204,7 +205,6 @@ for(my $i = 0; $i < $nseq; $i++) {
     push(@fail_A, 0); # pass
   }
   else { 
-    my $cds_len_to_translate = $cds_len - ($codon_start - 1);
     if(($cds_len_to_translate % 3) != 0) { push(@fail_A, 1); } # fail
     else                                 { push(@fail_A, 0); } # pass
   }
@@ -327,8 +327,8 @@ for(my $i = 0; $i < $nseq; $i++) {
     else                    { $nincomplete_fail++; }
   }
 
-  if($do_passes || $any_fails) { 
-    $toprint = sprintf("%-22s  %11s  %5d  ", $prot_name, $incomplete, $codon_start);
+  if($do_all || $any_fails || ($n_N > 0) || ($n_nonACGTN > 0)) { 
+    $toprint = sprintf("%-22s  %11s  %5d  %6d  %7d  %7d  ", $prot_name, $incomplete, $codon_start, $cds_len_to_translate, $n_N, $n_nonACGTN);
     for(my $j = 0; $j < $last_test; $j++) { 
       $toprint .= sprintf(" %4d", $fail_A[$j]);
       if($fail_A[$j]) { 
@@ -387,19 +387,19 @@ if(! $skip_incompletes) {
 # print summary
 print $header_line;
 
-printf("%-22s  %11s  %5s  ", "# num-fails-complete", "no", "N/A");
+printf("%-22s  %11s  %5s  %6s  %7s  %7s  ", "# num-fails-complete", "no", "-", "-", "-", "-");
 for(my $j = 0; $j < $last_test; $j++) { 
   printf(" %4d", $complete_nfail_A[$j]);
 }
 printf("    N/A\n");
 
-printf("%-22s  %11s  %5s  ", "# num-fails-incomplete", "yes", "N/A");
+printf("%-22s  %11s  %5s  %6s  %7s  %7s  ", "# num-fails-incomplete", "yes", "-", "-", "-", "-");
 for(my $j = 0; $j < $last_test; $j++) { 
   printf(" %4d", $incomplete_nfail_A[$j]);
 }
 printf("    N/A\n");
 
-printf("%-22s  %11s  %5s  ", "# num-fails-all", "N/A", "N/A");
+printf("%-22s  %11s  %5s  %6s  %7s  %7s  ", "# num-fails-all", "-", "-", "-", "-", "-");
 for(my $j = 0; $j < $last_test; $j++) { 
   printf(" %4d", $complete_nfail_A[$j] + $incomplete_nfail_A[$j]);
 }
@@ -428,7 +428,15 @@ printf("#\n");
 for(my $i = 0; $i < $last_test; $i++) { 
   printf("# Test %d (T%d): %s\n", $i+1, $i+1, $testdesc_A[$i]);
 } 
-
+printf("#\n");
+printf("# Other non-obvious column meanings:\n");
+printf("# \"start\":     codon_start annotation, CDS translation begins at this position of CDS (usually 1)\n");
+printf("# \"tr-len\":    length of CDS to be translated (annotated length - (codon_start - 1))\n");
+printf("# \"num-Ns\":    number of N nucleotides in the CDS sequence\n");
+printf("# \"num-oth\":   number of other ambiguous nucleotides (non-N, non-ACGT) in the CDS sequence\n");
+printf("# \"pass/fail\": \'pass\' if all tests pass (have 0s in their respective columns), else \'fail\'\n");
+printf("#\n");
+printf("#[ok]\n");
 exit 0;
 
 
@@ -534,8 +542,10 @@ sub isCDSIncomplete {
 # Subroutine: translateDNA()
 # Args:       $cds_seq:     CDS sequence
 #             $codon_start: N=1|2|3, translation of CDS starts at position N
-# Returns:    translated protein sequence as a string
-#             
+# Returns:    Three values:
+#             1: translated protein sequence as a string
+#             2: number of N     nucleotides
+#             3: number of non-N nucleotides
 sub translateDNA { 
   my $sub_name = "translateDNA()";
   my $nargs_exp = 2;
@@ -548,12 +558,25 @@ sub translateDNA {
   my $length = length($cds_seq);
   my $posn = $codon_start - 1;
   my $protein = "";
+  my $n_N        = 0;
+  my $n_nonACGTN = 0;
   while($posn < $length) { 
-    $protein .= translateCodon(substr($cds_seq, $posn, 3));
-    $posn += 3;
+    my $codon = substr($cds_seq, $posn, 3);
+    $protein .= translateCodon($codon);
+
+    # determine how many Ns and other ambig chars it has
+    
+    my $i = 0;
+    while(($i < 3) && ($posn < $length)) { 
+      my $nt = substr($cds_seq, $posn, 1);
+      if   ($nt eq "N")       { $n_N++; }
+      elsif($nt !~ m/[ACGT]/) { $n_nonACGTN++; }
+      $posn++;
+      $i++;
+    }
   }
 
-  return $protein;
+  return ($protein, $n_N, $n_nonACGTN);
 }
 
 # Subroutine: translateCodon()
