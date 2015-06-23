@@ -27,22 +27,23 @@ my $nall             = 9; # number of tests run if -a is used
 my $do_all           = 0; # do all used, set to '1' if -a is used
 my $do_onlyfails     = 0; # only print sequences for which there's at least one fail
 my $do_verbose       = 0; # changed to '1' with -v, output fetched and translated protein sequences
-my $do_incompletes   = 0; # changed to '1' with -i, output fetched and translated protein sequences
+my $skip_incompletes = 0; # changed to '1' with -skipinc, output fetched and translated protein sequences
 my $do_compare_input = 0; # changed to '1' with -incompare, input sequences were created by dnaorg_compare_genomes.pl
 
 &GetOptions( "a" => \$do_all, 
              "f" => \$do_onlyfails, 
-             "i" => \$do_incompletes,
              "v" => \$do_verbose, 
              "incompare" => \$do_compare_input);
+             "skipinc  " => \$skip_incompletes,
 
 my $usage;
 $usage  = "esl-test-cds-against-aa.pl [OPTIONS] <input fasta file output from esl-fetch-cds.pl>\n";
 $usage .= "\tOPTIONS:\n";
-$usage .= "\t\t-a : do all tests, instead of just first four\n";
+$usage .= "\t\t-a : do all tests, instead of just first six\n";
 $usage .= "\t\t-f : only print sequences with at least one failure\n";
-$usage .= "\t\t-i : print results for incomplete CDS, we don't by default\n";
 $usage .= "\t\t-v : be verbose; output translated and fetched protein sequences\n";
+$usage .= "\t\t-incompare : input file was created by dnaorg_compare_genomes.pl -protid -codonstart\n";
+$usage .= "\t\t-skipinc   : skip examination of incomplete CDS'\n";
 
 if(scalar(@ARGV) != 1) { die $usage; }
 ($in_fafile) = @ARGV;
@@ -55,10 +56,16 @@ my $nseq = $sqfile->nseq_ssi;
 my @testdesc_A = (); # list of descriptions for each test
 
 # print headers for tabular output
-my $header_line = sprintf("%-20s  %11s  %5s  ", "#protein-accession", "incomplete?", "start");
+my @complete_nfail_A  = (); # [0..$j..$last_test-1] number of failures for complete CDS for test $j+1
+my @incomplete_nfail_A= (); # [0..$j..$last_test-1] number of failures for incomplete CDS for test $j+1
+my $ncomplete = 0;   # number of complete CDS
+my $nincomplete = 0; # number of incomplete CDS
+my $header_line = sprintf("%-22s  %11s  %5s  ", "#protein-accession", "incomplete?", "start");
 my $last_test = ($do_all) ? $nall : $ndf;
 for(my $i = 0; $i < $last_test; $i++) { 
-  $header_line .= sprintf(" T%d", ($i+1)); 
+  $header_line .= sprintf("   T%d", ($i+1)); 
+  $complete_nfail_A[$i]   = 0;
+  $incomplete_nfail_A[$i] = 0;
 }
 $header_line .= "    pass/fail\n";
 
@@ -123,7 +130,7 @@ for(my $i = 0; $i < $nseq; $i++) {
       $codon_start = 1;
     }
     elsif($codon_start ne "1" && $codon_start ne "2" && $codon_start ne "3") {
-      die "ERROR (-incompare) unable to parse codon_start in desc: $cds_desc";
+      die "ERROR (-incompare) unable to parse codon_start in desc: $cds_desc (is -incompare appropriate to use for this file?)";
     }
   }
   else { # default case 
@@ -141,17 +148,17 @@ for(my $i = 0; $i < $nseq; $i++) {
     $codon_start =~ s/\:.+$//;
     # 1
     if($codon_start ne "1" && $codon_start ne "2" && $codon_start ne "3") {
-      die "ERROR (default) unable to parse codon_start in $cds_name (codon_start: $codon_start)";
+      die "ERROR (default) unable to parse codon_start in $cds_name (codon_start: $codon_start, should you be using -incompare for this file?))";
     }
   }
 
   # 2. determine if CDS sequence is incomplete on 5' and/or 3' end
   my ($ic_start, $ic_stop);
   if($do_compare_input) { 
-    isCDSIncomplete($cds_desc, $do_compare_input);
+    ($ic_start, $ic_stop) = isCDSIncomplete($cds_desc, $do_compare_input);
   }
   else { #default
-    isCDSIncomplete($cds_name, $do_compare_input);
+    ($ic_start, $ic_stop) = isCDSIncomplete($cds_name, $do_compare_input);
   }
 
   # 3. translate the CDS sequence
@@ -187,6 +194,7 @@ for(my $i = 0; $i < $nseq; $i++) {
   my @fail_A         = (); # '0' if test x failed, else 0
   my @translated_A   = split("", $prot_translated); 
   my @fetched_A      = split("", $prot_fetched);
+  my $errmsg         = "";
 
   # Test: Is CDS length divisible by 3? 
   if($i == 0) { push(@testdesc_A, "Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)"); }
@@ -260,7 +268,9 @@ for(my $i = 0; $i < $nseq; $i++) {
       }
       else { 
         $nmismatch++;
-        if($do_verbose) { printf("$prot_name position %d mismatch %s ne %s (translated ne fetched)\n", $p+1, $translated_A[$p], $fetched_A[$p]); }
+        if($errmsg ne "") { $errmsg .= "; "; }
+        $errmsg .= sprintf("position %d mismatch %s ne %s (translated ne fetched)", $p+1, $translated_A[$p], $fetched_A[$p]);
+        if($do_verbose) { print $prot_name . " " . $errmsg . "\n"; }
       }
     }
   }
@@ -297,19 +307,30 @@ for(my $i = 0; $i < $nseq; $i++) {
   # store output for to print later
   my $any_fails = 0;
   for(my $j = 0; $j < $last_test; $j++) { 
-    if($fail_A[$j]) { $any_fails = 1; }
+    if($fail_A[$j]) { 
+      $any_fails = 1; 
+    }
   }
   $toprint = "";
+  my $incomplete = "no";
+  if($ic_start && $ic_stop) { $incomplete = "yes(both)"; }
+  elsif($ic_start)          { $incomplete = "yes(start)"; }
+  elsif($ic_stop)           { $incomplete = "yes(stop)"; }
+  if($incomplete eq "no") { $ncomplete++;   }
+  else                    { $nincomplete++; }
+
   if((!$do_onlyfails) || $any_fails) { 
-    my $incomplete = "no";
-    if($ic_start && $ic_stop) { $incomplete = "yes(both)"; }
-    elsif($ic_start)          { $incomplete = "yes(start)"; }
-    elsif($ic_stop)           { $incomplete = "yes(stop)"; }
-    $toprint = sprintf("%-20s  %11s  %5d  ", $prot_name, $incomplete, $codon_start);
+    $toprint = sprintf("%-22s  %11s  %5d  ", $prot_name, $incomplete, $codon_start);
     for(my $j = 0; $j < $last_test; $j++) { 
-      $toprint .= sprintf("  %d", $fail_A[$j]);
+      $toprint .= sprintf(" %4d", $fail_A[$j]);
+      if($fail_A[$j]) { 
+        if($incomplete eq "no") { $complete_nfail_A[$j]++;   }
+        else                    { $incomplete_nfail_A[$j]++; }
+      }
     }
-    $toprint .= sprintf("    %s\n", $any_fails ? "fail" : "pass");
+    $toprint .= sprintf("    %-9s", $any_fails ? "fail" : "pass");
+    if($errmsg ne "") { $toprint .= " # " . $errmsg; }
+    $toprint .= "\n";
 
     if($do_verbose) { 
       $toprint .= "TRANSLATED: $prot_translated\n"; 
@@ -335,7 +356,7 @@ if(scalar(@c_toprint_A) > 0) {
   foreach $toprint (@c_toprint_A) { print $toprint; }
   print "#\n";
 }
-if($do_incompletes) { 
+if(! $skip_incompletes) { 
   if(scalar(@icstart_toprint_A) > 0) { 
     print "# Incomplete CDS: (incomplete start, complete stop)\n";
     print $header_line;
@@ -355,6 +376,26 @@ if($do_incompletes) {
   print "#\n";
   }
 }
+# print summary
+print $header_line;
+
+printf("%-22s  %11s  %5s  ", "# num-fails-complete", "no", "N/A");
+for(my $j = 0; $j < $last_test; $j++) { 
+  printf(" %4d", $complete_nfail_A[$j]);
+}
+printf("    N/A\n");
+
+printf("%-22s  %11s  %5s  ", "# num-fails-incomplete", "yes", "N/A");
+for(my $j = 0; $j < $last_test; $j++) { 
+  printf(" %4d", $incomplete_nfail_A[$j]);
+}
+printf("    N/A\n");
+
+printf("%-22s  %11s  %5s  ", "# num-fails-all", "yes", "N/A");
+for(my $j = 0; $j < $last_test; $j++) { 
+  printf(" %4d", $complete_nfail_A[$j] + $incomplete_nfail_A[$j]);
+}
+printf("    N/A\n");
 
 # print descriptions of each test:
 printf("#\n");
@@ -388,9 +429,8 @@ sub isCDSIncomplete {
 
   my ($cds_name_or_desc, $do_compare_input) = (@_);
 
-  my $ic_start        = undef;
-  my $ic_stop         = undef;
-  my $codon_start     = undef;
+  my $ic_start        = 0;
+  my $ic_stop         = 0;
   my $expected_strand = undef;
   my $orig_cds_name_or_desc = $cds_name_or_desc;
   
@@ -522,7 +562,7 @@ sub translateCodon {
   }
 
   # if we get here the codon is length 3
-  if($codon !~ m/[ACGTWSMKRYN]{3}/) { die "ERROR unexpected nucleotide in codon $codon"; }
+  if($codon !~ m/[ACGTWSMKRYBDHVN]{3}/) { die "ERROR unexpected nucleotide in codon $codon"; }
 
   if   ($codon eq "AAA") { return "K"; } 
   elsif($codon eq "AAC") { return "N"; }
@@ -541,6 +581,10 @@ sub translateCodon {
   elsif($codon eq "ACK") { return "T"; } # special 
   elsif($codon eq "ACR") { return "T"; } # special 
   elsif($codon eq "ACY") { return "T"; } # special 
+  elsif($codon eq "ACB") { return "T"; } # special 
+  elsif($codon eq "ACD") { return "T"; } # special 
+  elsif($codon eq "ACH") { return "T"; } # special 
+  elsif($codon eq "ACV") { return "T"; } # special 
   elsif($codon eq "ACN") { return "T"; } # special 
 
   elsif($codon eq "AGA") { return "R"; }
@@ -557,6 +601,7 @@ sub translateCodon {
   elsif($codon eq "ATW") { return "I"; } # special 
   elsif($codon eq "ATM") { return "I"; } # special 
   elsif($codon eq "ATY") { return "I"; } # special 
+  elsif($codon eq "ATH") { return "I"; } # special 
 
 
 
@@ -577,6 +622,10 @@ sub translateCodon {
   elsif($codon eq "CCK") { return "P"; } # special
   elsif($codon eq "CCR") { return "P"; } # special
   elsif($codon eq "CCY") { return "P"; } # special
+  elsif($codon eq "CCB") { return "P"; } # special
+  elsif($codon eq "CCD") { return "P"; } # special
+  elsif($codon eq "CCH") { return "P"; } # special
+  elsif($codon eq "CCV") { return "P"; } # special
   elsif($codon eq "CCN") { return "P"; } # special
 
   elsif($codon eq "CGA") { return "R"; }
@@ -601,6 +650,10 @@ sub translateCodon {
   elsif($codon eq "CTK") { return "L"; } # special
   elsif($codon eq "CTR") { return "L"; } # special
   elsif($codon eq "CTY") { return "L"; } # special
+  elsif($codon eq "CTB") { return "L"; } # special
+  elsif($codon eq "CTD") { return "L"; } # special
+  elsif($codon eq "CTH") { return "L"; } # special
+  elsif($codon eq "CTV") { return "L"; } # special
   elsif($codon eq "CTN") { return "L"; } # special
 
 
@@ -622,6 +675,10 @@ sub translateCodon {
   elsif($codon eq "GCK") { return "A"; } # special
   elsif($codon eq "GCR") { return "A"; } # special
   elsif($codon eq "GCY") { return "A"; } # special
+  elsif($codon eq "GCB") { return "A"; } # special
+  elsif($codon eq "GCD") { return "A"; } # special
+  elsif($codon eq "GCH") { return "A"; } # special
+  elsif($codon eq "GCV") { return "A"; } # special
   elsif($codon eq "GCN") { return "A"; } # special
 
   elsif($codon eq "GGA") { return "G"; }
@@ -634,6 +691,10 @@ sub translateCodon {
   elsif($codon eq "GGK") { return "G"; } # special
   elsif($codon eq "GGR") { return "G"; } # special
   elsif($codon eq "GGY") { return "G"; } # special
+  elsif($codon eq "GGB") { return "G"; } # special
+  elsif($codon eq "GGD") { return "G"; } # special
+  elsif($codon eq "GGH") { return "G"; } # special
+  elsif($codon eq "GGV") { return "G"; } # special
   elsif($codon eq "GGN") { return "G"; } # special
 
   elsif($codon eq "GTA") { return "V"; }
@@ -646,6 +707,10 @@ sub translateCodon {
   elsif($codon eq "GTK") { return "V"; } # special
   elsif($codon eq "GTR") { return "V"; } # special
   elsif($codon eq "GTY") { return "V"; } # special
+  elsif($codon eq "GTB") { return "V"; } # special
+  elsif($codon eq "GTD") { return "V"; } # special
+  elsif($codon eq "GTH") { return "V"; } # special
+  elsif($codon eq "GTV") { return "V"; } # special
   elsif($codon eq "GTN") { return "V"; } # special
 
 
@@ -667,6 +732,10 @@ sub translateCodon {
   elsif($codon eq "TCK") { return "S"; } # special
   elsif($codon eq "TCR") { return "S"; } # special
   elsif($codon eq "TCY") { return "S"; } # special
+  elsif($codon eq "TCB") { return "S"; } # special
+  elsif($codon eq "TCD") { return "S"; } # special
+  elsif($codon eq "TCH") { return "S"; } # special
+  elsif($codon eq "TCV") { return "S"; } # special
   elsif($codon eq "TCN") { return "S"; } # special
 
   elsif($codon eq "TGA") { return "*"; }
@@ -685,8 +754,14 @@ sub translateCodon {
   # and the really special
   elsif($codon eq "YTG") { return "L"; }
   elsif($codon eq "YTA") { return "L"; }
+  elsif($codon eq "YTR") { return "L"; }
 
-  # and the really really special: two AA ambiguities B (D or N) and Z (Q or E)
+  elsif($codon eq "MGR") { return "R"; }
+  elsif($codon eq "MGA") { return "R"; }
+  elsif($codon eq "MGG") { return "R"; }
+
+  # and the really really special: three AA ambiguities B (D or N), Z (Q or E), and J (L or I)
+  # I found J here: http://www.ddbj.nig.ac.jp/sub/ref2-e.html
   elsif($codon eq "RAC") { return "B"; }
   elsif($codon eq "RAT") { return "B"; }
   elsif($codon eq "RAY") { return "B"; }
@@ -694,6 +769,17 @@ sub translateCodon {
   elsif($codon eq "SAA") { return "Z"; }
   elsif($codon eq "SAG") { return "Z"; }
   elsif($codon eq "SAR") { return "Z"; }
+
+  elsif($codon eq "WTA") { return "J"; }
+  elsif($codon eq "YTA") { return "J"; }
+  elsif($codon eq "YTG") { return "J"; }
+  elsif($codon eq "MTA") { return "J"; }
+  elsif($codon eq "MTC") { return "J"; }
+  elsif($codon eq "MTT") { return "J"; }
+  elsif($codon eq "MTM") { return "J"; }
+  elsif($codon eq "MTW") { return "J"; }
+  elsif($codon eq "MTY") { return "J"; }
+  elsif($codon eq "MTH") { return "J"; }
 
   if($do_verbose) { print "translating $codon to X\n"; }
   return "X"; 
