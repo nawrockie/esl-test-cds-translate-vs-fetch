@@ -412,15 +412,15 @@ printf("# category    num-pass  num-fail  fract-fail\n");
 printf("# complete    %8d  %8d  %10.4f\n", 
        $ncomplete - $ncomplete_fail,   
        $ncomplete_fail, 
-       $ncomplete_fail / $ncomplete);
+       ($ncomplete > 0) ? ($ncomplete_fail / $ncomplete) : 0.);
 printf("# incomplete  %8d  %8d  %10.4f\n", 
        $nincomplete - $nincomplete_fail,   
        $nincomplete_fail, 
-       $nincomplete_fail / $nincomplete);
+       ($nincomplete > 0) ? ($nincomplete_fail / $nincomplete) : 0.);
 printf("# all         %8d  %8d  %10.4f\n", 
        $nincomplete + $ncomplete - ($ncomplete_fail + $nincomplete_fail),   
        $ncomplete_fail + $nincomplete_fail, 
-       ($ncomplete_fail + $nincomplete_fail) / ($ncomplete + $nincomplete));
+       (($ncomplete + $nincomplete) > 0) ? (($ncomplete_fail + $nincomplete_fail) / ($ncomplete + $nincomplete)) : 0.);
 
 
 # print descriptions of each test:
