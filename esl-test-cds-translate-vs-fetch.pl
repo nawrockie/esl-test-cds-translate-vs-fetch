@@ -22,26 +22,26 @@ use Bio::Easel::SqFile;
 
 my $in_fafile        = "";    # input name of input file to split up, 1st cmd line arg
 my $idfetch          = "/netopt/ncbi_tools64/bin/idfetch";
-my $ndf              = 6; # number of tests run by default
-my $nall             = 9; # number of tests run if -a is used
-my $do_all           = 0; # do all used, set to '1' if -a is used
-my $do_onlyfails     = 0; # only print sequences for which there's at least one fail
+my $nsub             = 6; # number of tests run if -subset used
+my $nall             = 9; # number of total tests
+my $do_subset        = 0; # changed to '1' with -subset, do only first 6 tests, by default do all tests
+my $do_passes        = 0; # changed to '1' with -p to print sequences that pass all tests, not just those that fail >= 1
 my $do_verbose       = 0; # changed to '1' with -v, output fetched and translated protein sequences
 my $skip_incompletes = 0; # changed to '1' with -skipinc, output fetched and translated protein sequences
 my $do_compare_input = 0; # changed to '1' with -incompare, input sequences were created by dnaorg_compare_genomes.pl
 
-&GetOptions( "a" => \$do_all, 
-             "f" => \$do_onlyfails, 
-             "v" => \$do_verbose, 
-             "incompare" => \$do_compare_input);
-             "skipinc  " => \$skip_incompletes,
+&GetOptions( "v"         => \$do_verbose, 
+             "p"         => \$do_passes, 
+             "subset"    => \$do_subset, 
+             "incompare" => \$do_compare_input,
+             "skipinc"   => \$skip_incompletes) || die "ERROR unknown option";
 
 my $usage;
 $usage  = "esl-test-cds-against-aa.pl [OPTIONS] <input fasta file output from esl-fetch-cds.pl>\n";
 $usage .= "\tOPTIONS:\n";
-$usage .= "\t\t-a : do all tests, instead of just first six\n";
-$usage .= "\t\t-f : only print sequences with at least one failure\n";
-$usage .= "\t\t-v : be verbose; output translated and fetched protein sequences\n";
+$usage .= "\t\t-v         : be verbose; output translated and fetched protein sequences\n";
+$usage .= "\t\t-p         : print all sequences, even those that pass all tests\n";
+$usage .= "\t\t-subset    : only perform first six tests, not all nine\n";
 $usage .= "\t\t-incompare : input file was created by dnaorg_compare_genomes.pl -protid -codonstart\n";
 $usage .= "\t\t-skipinc   : skip examination of incomplete CDS'\n";
 
@@ -58,10 +58,12 @@ my @testdesc_A = (); # list of descriptions for each test
 # print headers for tabular output
 my @complete_nfail_A  = (); # [0..$j..$last_test-1] number of failures for complete CDS for test $j+1
 my @incomplete_nfail_A= (); # [0..$j..$last_test-1] number of failures for incomplete CDS for test $j+1
-my $ncomplete = 0;   # number of complete CDS
-my $nincomplete = 0; # number of incomplete CDS
+my $ncomplete        = 0; # number of complete CDS, total
+my $nincomplete      = 0; # number of incomplete CDS, total
+my $ncomplete_fail   = 0; # number of complete CDS that had at least 1 failure
+my $nincomplete_fail = 0; # number of incomplete CDS that had at least 1 failure
 my $header_line = sprintf("%-22s  %11s  %5s  ", "#protein-accession", "incomplete?", "start");
-my $last_test = ($do_all) ? $nall : $ndf;
+my $last_test = ($do_subset) ? $nsub : $nall;
 for(my $i = 0; $i < $last_test; $i++) { 
   $header_line .= sprintf("   T%d", ($i+1)); 
   $complete_nfail_A[$i]   = 0;
@@ -319,7 +321,12 @@ for(my $i = 0; $i < $nseq; $i++) {
   if($incomplete eq "no") { $ncomplete++;   }
   else                    { $nincomplete++; }
 
-  if((!$do_onlyfails) || $any_fails) { 
+  if($any_fails) { 
+    if($incomplete eq "no") { $ncomplete_fail++;   }
+    else                    { $nincomplete_fail++; }
+  }
+
+  if($do_passes || $any_fails) { 
     $toprint = sprintf("%-22s  %11s  %5d  ", $prot_name, $incomplete, $codon_start);
     for(my $j = 0; $j < $last_test; $j++) { 
       $toprint .= sprintf(" %4d", $fail_A[$j]);
@@ -391,11 +398,29 @@ for(my $j = 0; $j < $last_test; $j++) {
 }
 printf("    N/A\n");
 
-printf("%-22s  %11s  %5s  ", "# num-fails-all", "yes", "N/A");
+printf("%-22s  %11s  %5s  ", "# num-fails-all", "N/A", "N/A");
 for(my $j = 0; $j < $last_test; $j++) { 
   printf(" %4d", $complete_nfail_A[$j] + $incomplete_nfail_A[$j]);
 }
 printf("    N/A\n");
+
+printf("#\n");
+printf("# Summary:\n");
+printf("#\n");
+printf("# category    num-pass  num-fail  fract-fail\n");
+printf("# complete    %8d  %8d  %10.4f\n", 
+       $ncomplete - $ncomplete_fail,   
+       $ncomplete_fail, 
+       $ncomplete_fail / $ncomplete);
+printf("# incomplete  %8d  %8d  %10.4f\n", 
+       $nincomplete - $nincomplete_fail,   
+       $nincomplete_fail, 
+       $nincomplete_fail / $nincomplete);
+printf("# all         %8d  %8d  %10.4f\n", 
+       $nincomplete + $ncomplete - ($ncomplete_fail + $nincomplete_fail),   
+       $ncomplete_fail + $nincomplete_fail, 
+       ($ncomplete_fail + $nincomplete_fail) / ($ncomplete + $nincomplete));
+
 
 # print descriptions of each test:
 printf("#\n");
