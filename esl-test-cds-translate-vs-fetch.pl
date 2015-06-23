@@ -23,7 +23,7 @@ use Bio::Easel::SqFile;
 my $in_fafile        = "";    # input name of input file to split up, 1st cmd line arg
 my $idfetch          = "/netopt/ncbi_tools64/bin/idfetch";
 my $nsub             = 6; # number of tests run if -subset used
-my $nall             = 9; # number of total tests
+my $nall             = 8; # number of total tests
 my $do_subset        = 0; # changed to '1' with -subset, do only first 6 tests, by default do all tests
 my $do_passes        = 0; # changed to '1' with -p to print sequences that pass all tests, not just those that fail >= 1
 my $do_verbose       = 0; # changed to '1' with -v, output fetched and translated protein sequences
@@ -41,7 +41,7 @@ $usage  = "esl-test-cds-against-aa.pl [OPTIONS] <input fasta file output from es
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t-v         : be verbose; output translated and fetched protein sequences\n";
 $usage .= "\t\t-p         : print all sequences, even those that pass all tests\n";
-$usage .= "\t\t-subset    : only perform first six tests, not all nine\n";
+$usage .= "\t\t-subset    : only perform first six tests, not all eight\n";
 $usage .= "\t\t-incompare : input file was created by dnaorg_compare_genomes.pl -protid -codonstart\n";
 $usage .= "\t\t-skipinc   : skip examination of incomplete CDS'\n";
 
@@ -128,7 +128,7 @@ for(my $i = 0; $i < $nseq; $i++) {
     # none-annotated
     $codon_start =~ s/\s+.+$//;
     # none-annotated
-    if($codon_start eq "none-annotated") { 
+    if($codon_start eq "none-annotated" || $codon_start eq "-") { 
       $codon_start = 1;
     }
     elsif($codon_start ne "1" && $codon_start ne "2" && $codon_start ne "3") {
@@ -301,10 +301,11 @@ for(my $i = 0; $i < $nseq; $i++) {
   if($nintstop_fetched > 0) { push(@fail_A, 1); } # fail
   else                      { push(@fail_A, 0); } # pass
 
-  # Test: Does translated CDS start with an M? 
-  if($i == 0) { push(@testdesc_A, "Translated CDS starts with an M"); }
-  if($translated_A[0] ne "M") { push(@fail_A, 1); } # fail
-  else                        { push(@fail_A, 0); } # pass
+# NOT CURRENTLY DOING THIS TEST:
+#  # Test: Does translated CDS start with an M? 
+#  if($i == 0) { push(@testdesc_A, "Translated CDS starts with an M"); }
+#  if($translated_A[0] ne "M") { push(@fail_A, 1); } # fail
+#  else                        { push(@fail_A, 0); } # pass
 
   # store output for to print later
   my $any_fails = 0;
@@ -468,6 +469,7 @@ sub isCDSIncomplete {
   #
   # $do_compare_input == 1 examples:
   # NC_004004:1059:8027:+: product:pol protein protein_id:ref|NP_658990.1| codon_start:none-annotated
+  # NC_004004:1059:8027:+: product:pol protein protein_id:ref|NP_658990.1| codon_start:-
   # NC_009942:97:3552:+:NC_009942:3552:3683:+: product:truncated polyprotein protein_id:ref|YP_006485882.1| codon_start:none-annotated
   # 
   if($do_compare_input) { 
