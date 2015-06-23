@@ -41,8 +41,8 @@ source /panfs/pan1/dnaorg/programs/setup-bio-easel.csh.sh
 #esl-test-cds-against-aa.pl [OPTIONS] <input fasta file output from esl-fetch-cds.pl>
 #	OPTIONS:
 #		-v         : be verbose; output translated and fetched protein sequences
-#		-p         : print all sequences, even those that pass all tests
-#		-subset    : only perform first six tests, not all nine
+#		-a         : print all sequences, even those that pass all tests and have 0 ambig chars
+#		-subset    : only perform first six tests, not all eight
 #		-incompare : input file was created by dnaorg_compare_genomes.pl -protid -codonstart
 #		-skipinc   : skip examination of incomplete CDS'
 #
@@ -54,39 +54,49 @@ perl esl-test-cds-translate-vs-fetch.pl sample.cds.fa
 #
 # Output:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Complete CDS:
-#protein-accession      incomplete?  start     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-AAH45158.1                       no      1      0    0    0    0    0    1    0    0    fail      # position 241 mismatch A ne P (translated ne fetched)
-#
-#protein-accession      incomplete?  start     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-# num-fails-complete             no    N/A      0    0    0    0    0    1    0    0    N/A
-# num-fails-incomplete          yes    N/A      0    0    0    0    0    0    0    0    N/A
-# num-fails-all                 N/A    N/A      0    0    0    0    0    1    0    0    N/A
-#
-# Summary:
-#
-# category    num-pass  num-fail  fract-fail
-# complete           1         1      0.5000
-# incomplete         2         0      0.0000
-# all                3         1      0.2500
-#
-# Test 1 (T1): Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)
-# Test 2 (T2): Fetched protein starts with an M (or is annot. as incomplete on 5' end)
-# Test 3 (T3): CDS ends with a stop codon (or is annot. as incomplete on 3' end)
-# Test 4 (T4): CDS has 0 Ns that make AA assignment ambiguous
-# Test 5 (T5): Translated CDS and fetched protein are identical length
-#              (ignoring final codon, if it's a stop or incomplete)
-# Test 6 (T6): Translated CDS and fetched protein are identical sequence
-#              (ignoring hangovers if lengths differ and final codon (if stop) and codons with ambiguous nts)
-# Test 7 (T7): No internal stops in translated CDS
-# Test 8 (T8): No internal stops in fetched protein
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## Complete CDS:
+##protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
+#AAH45158.1                       no      1     867        0        0      0    0    0    0    0    1    0    0    fail      # position 241 mismatch A ne P (translated ne fetched)
+##
+##protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
+## num-fails-complete             no      -       -        -        -      0    0    0    0    0    1    0    0    N/A
+## num-fails-incomplete          yes      -       -        -        -      0    0    0    0    0    0    0    0    N/A
+## num-fails-all                   -      -       -        -        -      0    0    0    0    0    1    0    0    N/A
+##
+## Summary:
+##
+## category    num-pass  num-fail  fract-fail
+## complete           1         1      0.5000
+## incomplete         2         0      0.0000
+## all                3         1      0.2500
+##
+## Test 1 (T1): Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)
+## Test 2 (T2): Fetched protein starts with an M (or is annot. as incomplete on 5' end)
+## Test 3 (T3): CDS ends with a stop codon (or is annot. as incomplete on 3' end)
+## Test 4 (T4): CDS has 0 Ns that make AA assignment ambiguous
+## Test 5 (T5): Translated CDS and fetched protein are identical length
+##              (ignoring final codon, if it's a stop or incomplete)
+## Test 6 (T6): Translated CDS and fetched protein are identical sequence
+##              (ignoring hangovers if lengths differ and final codon (if stop) and codons with ambiguous nts)
+## Test 7 (T7): No internal stops in translated CDS
+## Test 8 (T8): No internal stops in fetched protein
+##
+## Other non-obvious column meanings:
+## "start":     codon_start annotation, CDS translation begins at this position of CDS (usually 1)
+## "tr-len":    length of CDS to be translated (annotated length - (codon_start - 1))
+## "num-Ns":    number of N nucleotides in the CDS sequence
+## "num-oth":   number of other ambiguous nucleotides (non-N, non-ACGT) in the CDS sequence
+## "pass/fail": 'pass' if all tests pass (have 0s in their respective columns), else 'fail'
+##
+##[ok]
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # The output explains the tests run for each CDS sequence and which
 # failed. Each line that does not begin with a '#' lists information
 # for a different sequence. By default, only sequences which have at
-# least one failure are printed, use -p to print all sequences, even
-# those that pass all tests.
+# least one failure or at least one ambiguous nucleotide are printed,
+# use -p to print all sequences, even those that pass all tests and
+# have 0 ambiguous characters.
 # 
 ###################################################
 # Example command and output with -incompare option
@@ -101,36 +111,67 @@ AAH45158.1                       no      1      0    0    0    0    0    1    0 
 # 
 # Here is an example of running the script on those files:
 #
-perl esl-test-cds-translate-vs-fetch.pl -incompare sample.cds.compare.in
+perl esl-test-cds-translate-vs-fetch.pl -incompare sample.cds.compare.fa
 #
 # Output:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Complete CDS:
-#protein-accession      incomplete?  start     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-AIJ19251.1                       no      1      0    0    1    0    1    0    0    0    fail     
-#
-#protein-accession      incomplete?  start     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-# num-fails-complete             no    N/A      0    0    1    0    1    0    0    0    N/A
-# num-fails-incomplete          yes    N/A      0    0    0    0    0    0    0    0    N/A
-# num-fails-all                 N/A    N/A      0    0    1    0    1    0    0    0    N/A
-#
-# Summary:
-#
-# category    num-pass  num-fail  fract-fail
-# complete         176         1      0.0056
-# incomplete         2         0      0.0000
-# all              178         1      0.0056
-#
-# Test 1 (T1): Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)
-# Test 2 (T2): Fetched protein starts with an M (or is annot. as incomplete on 5' end)
-# Test 3 (T3): CDS ends with a stop codon (or is annot. as incomplete on 3' end)
-# Test 4 (T4): CDS has 0 Ns that make AA assignment ambiguous
-# Test 5 (T5): Translated CDS and fetched protein are identical length
-#              (ignoring final codon, if it's a stop or incomplete)
-# Test 6 (T6): Translated CDS and fetched protein are identical sequence
-#              (ignoring hangovers if lengths differ and final codon (if stop) and codons with ambiguous nts)
-# Test 7 (T7): No internal stops in translated CDS
-# Test 8 (T8): No internal stops in fetched protein
+## Complete CDS:
+##protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
+#BAF36015.1                       no      1    1203        0        1      0    0    0    0    0    0    0    0    pass     
+#BAM75936.1                       no      1     648        0        2      0    0    0    0    0    0    0    0    pass     
+#BAM76062.1                       no      1     681        0        1      0    0    0    0    0    0    0    0    pass     
+#ABR22132.1                       no      1     465        0        1      0    0    0    0    0    0    0    0    pass     
+#ACH57653.1                       no      1    2505        0        2      0    0    0    0    0    0    0    0    pass     
+#ACH57659.1                       no      1    2532        0        4      0    0    0    0    0    0    0    0    pass     
+#ACH57806.1                       no      1    2418        0        1      0    0    0    0    0    0    0    0    pass     
+#ACI47735.1                       no      1     681        0        1      0    0    0    0    0    0    0    0    pass     
+#ACI47743.1                       no      1     681        0        2      0    0    0    0    0    0    0    0    pass     
+#ACI47747.1                       no      1     681        0        2      0    0    0    0    0    0    0    0    pass     
+#ACI47763.1                       no      1     681        0        2      0    0    0    0    0    0    0    0    pass     
+#ACI47670.1                       no      1     681        0        1      0    0    0    0    0    0    0    0    pass     
+#ACI47696.1                       no      1     681        0        2      0    0    0    0    0    0    0    0    pass     
+#ACI47700.1                       no      1     681        0        2      0    0    0    0    0    0    0    0    pass     
+#ACM40683.1                       no      1     465        0        3      0    0    0    0    0    0    0    0    pass     
+#ACM40751.1                       no      1    2499        0        1      0    0    0    0    0    0    0    0    pass     
+#ACV40978.2                       no      1     639        5        0      0    0    0    0    0    0    0    0    pass     
+#ACT90880.1                       no      1    2538        0        8      0    0    0    0    0    0    0    0    pass     
+#ACX36142.1                       no      1    2532        0        4      0    0    0    0    0    0    0    0    pass     
+#AHV89638.1                       no      1     465        0        2      0    0    0    0    0    0    0    0    pass     
+#AIJ01391.1                       no      1    2532        0        1      0    0    0    0    0    0    0    0    pass     
+#AIJ19251.1                       no      1    9045        0      190      0    0    1    0    1    0    0    0    fail     
+#AIW52360.1                       no      1     678        0        1      0    0    0    0    0    0    0    0    pass     
+##
+##protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
+## num-fails-complete             no      -       -        -        -      0    0    1    0    1    0    0    0    N/A
+## num-fails-incomplete          yes      -       -        -        -      0    0    0    0    0    0    0    0    N/A
+## num-fails-all                   -      -       -        -        -      0    0    1    0    1    0    0    0    N/A
+##
+## Summary:
+##
+## category    num-pass  num-fail  fract-fail
+## complete         176         1      0.0056
+## incomplete         2         0      0.0000
+## all              178         1      0.0056
+##
+## Test 1 (T1): Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)
+## Test 2 (T2): Fetched protein starts with an M (or is annot. as incomplete on 5' end)
+## Test 3 (T3): CDS ends with a stop codon (or is annot. as incomplete on 3' end)
+## Test 4 (T4): CDS has 0 Ns that make AA assignment ambiguous
+## Test 5 (T5): Translated CDS and fetched protein are identical length
+##              (ignoring final codon, if it's a stop or incomplete)
+## Test 6 (T6): Translated CDS and fetched protein are identical sequence
+##              (ignoring hangovers if lengths differ and final codon (if stop) and codons with ambiguous nts)
+## Test 7 (T7): No internal stops in translated CDS
+## Test 8 (T8): No internal stops in fetched protein
+##
+## Other non-obvious column meanings:
+## "start":     codon_start annotation, CDS translation begins at this position of CDS (usually 1)
+## "tr-len":    length of CDS to be translated (annotated length - (codon_start - 1))
+## "num-Ns":    number of N nucleotides in the CDS sequence
+## "num-oth":   number of other ambiguous nucleotides (non-N, non-ACGT) in the CDS sequence
+## "pass/fail": 'pass' if all tests pass (have 0s in their respective columns), else 'fail'
+##
+##[ok]
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 #############
