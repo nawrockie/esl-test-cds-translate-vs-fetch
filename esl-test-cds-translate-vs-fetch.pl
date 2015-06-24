@@ -20,7 +20,7 @@ use strict;
 use Getopt::Long;
 use Bio::Easel::SqFile;
 
-my $in_fafile        = "";    # input name of input file to split up, 1st cmd line arg
+my $in_fafile        = "";  # name of input fasta file
 my $idfetch          = "/netopt/ncbi_tools64/bin/idfetch";
 my $nsub             = 6; # number of tests run if -subset used
 my $nall             = 8; # number of total tests
@@ -37,7 +37,7 @@ my $do_compare_input = 0; # changed to '1' with -incompare, input sequences were
              "skipinc"   => \$skip_incompletes) || die "ERROR unknown option";
 
 my $usage;
-$usage  = "esl-test-cds-against-aa.pl [OPTIONS] <input fasta file output from esl-fetch-cds.pl>\n";
+$usage  = "esl-test-cds-translate-vs-fetch.pl [OPTIONS] <input fasta file output from esl-fetch-cds.pl>\n";
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t-v         : be verbose; output translated and fetched protein sequences\n";
 $usage .= "\t\t-a         : print all sequences, even those that pass all tests and have 0 ambig chars\n";
