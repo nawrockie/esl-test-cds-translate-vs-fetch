@@ -53,17 +53,22 @@ my %t6_incomp_ct_H = ();
 my %t7_incomp_ct_H = ();
 my %t8_incomp_ct_H = ();
 
-# output lines for each test failure or ambig chars
-my @num_Ns_A = ();
-my @num_oth_A = ();
-my @t1_A = ();
-my @t2_A = ();
-my @t3_A = ();
-my @t4_A = ();
-my @t5_A = ();
-my @t6_A = ();
-my @t7_A = ();
-my @t8_A = ();
+# counts of totals across all files
+my $pass_all_ct = 0;
+my $fail_all_ct = 0;
+my $pass_incomp_ct = 0;
+my $fail_incomp_ct = 0;
+my $nlist_n  = 0;
+my $nlist_ab = 0;
+my $nfail_t1 = 0;
+my $nfail_t2 = 0;
+my $nfail_t3 = 0;
+my $nfail_t4 = 0;
+my $nfail_t5 = 0;
+my $nfail_t6 = 0;
+my $nfail_t7 = 0;
+my $nfail_t8 = 0;
+my $nfail_any = 0;
 
 my @file_A = (); # list of file names, as read from $in_listfile
 # open list file and parse each file listed in it
@@ -93,23 +98,23 @@ if(defined $outroot) {
   $t7_fail_file  = $outroot . ".T7.fail-list";
   $t8_fail_file  = $outroot . ".T8.fail-list";
   $any_fail_file = $outroot . ".any.fail-list";
-  open(OUTN,  ">" . $N_list_file)  || die "ERROR unable to open $N_list_file for writing"; 
-  open(OUTAB, ">" . $ab_list_file) || die "ERROR unable to open $ab_list_file for writing"; 
-  open(OUTT1, ">" . $t1_fail_file) || die "ERROR unable to open $t1_fail_file for writing"; 
-  open(OUTT2, ">" . $t2_fail_file) || die "ERROR unable to open $t2_fail_file for writing"; 
-  open(OUTT3, ">" . $t3_fail_file) || die "ERROR unable to open $t3_fail_file for writing"; 
-  open(OUTT4, ">" . $t4_fail_file) || die "ERROR unable to open $t4_fail_file for writing"; 
-  open(OUTT5, ">" . $t5_fail_file) || die "ERROR unable to open $t5_fail_file for writing"; 
-  open(OUTT6, ">" . $t6_fail_file) || die "ERROR unable to open $t6_fail_file for writing"; 
-  open(OUTT7, ">" . $t7_fail_file) || die "ERROR unable to open $t7_fail_file for writing"; 
-  open(OUTT8, ">" . $t8_fail_file) || die "ERROR unable to open $t8_fail_file for writing"; 
+  open(OUTN,   ">" . $N_list_file)   || die "ERROR unable to open $N_list_file for writing"; 
+  open(OUTAB,  ">" . $ab_list_file)  || die "ERROR unable to open $ab_list_file for writing"; 
+  open(OUTT1,  ">" . $t1_fail_file)  || die "ERROR unable to open $t1_fail_file for writing"; 
+  open(OUTT2,  ">" . $t2_fail_file)  || die "ERROR unable to open $t2_fail_file for writing"; 
+  open(OUTT3,  ">" . $t3_fail_file)  || die "ERROR unable to open $t3_fail_file for writing"; 
+  open(OUTT4,  ">" . $t4_fail_file)  || die "ERROR unable to open $t4_fail_file for writing"; 
+  open(OUTT5,  ">" . $t5_fail_file)  || die "ERROR unable to open $t5_fail_file for writing"; 
+  open(OUTT6,  ">" . $t6_fail_file)  || die "ERROR unable to open $t6_fail_file for writing"; 
+  open(OUTT7,  ">" . $t7_fail_file)  || die "ERROR unable to open $t7_fail_file for writing"; 
+  open(OUTT8,  ">" . $t8_fail_file)  || die "ERROR unable to open $t8_fail_file for writing"; 
+  open(OUTANY, ">" . $any_fail_file) || die "ERROR unable to open $any_fail_file for writing"; 
 }
 
-my $header_line1 = sprintf("%-50s  %9s  %9s  %9s  %9s  %-9s  %-9s  %-9s  %-9s  %-9s  %-9s  %-9s  %-9s\n", 
-                           "#", "num-pass", "num-fail", "num-w-Ns", "num-w-oth", "    T1", "    T2", "    T3", "    T4", "    T5", "    T6", "    T7", "    T8");
-my $header_line2 = sprintf("%-50s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s\n",
-                           "# filename", "tot", "inc", "tot", "inc", "tot", "inc", "tot", "inc", 
-                           "tot", "inc", "tot", "inc", "tot", "inc", "tot", "inc", "tot", "inc", "tot", "inc", "tot", "inc", "tot", "inc");
+my $header_line1 = sprintf("%-50s  %9s  %9s\n", 
+                           "#", "num-pass", "num-fail");
+my $header_line2 = sprintf("%-50s  %4s %4s  %4s %4s  %9s  %9s  %4s  %4s  %4s  %4s  %4s  %4s  %4s  %4s\n", 
+                           "# filename", "tot", "inc", "tot", "inc", "num-w-Ns", "num-w-oth", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8");
 
 print $header_line1; 
 print $header_line2; 
@@ -120,6 +125,8 @@ while(my $line = <LIST>) {
   chomp $line;
   $file_ctr++;
   my $file = $line;
+  my $file2print = $file;
+  $file2print =~ s/^.+\///;
   if(! -s $file) { die "ERROR, unable to open $file listed in $in_listfile"; }
   # Lines we parse (except first one):
   #protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
@@ -145,28 +152,30 @@ while(my $line = <LIST>) {
       { 
         my ($paccn, $ntaccn, $incomplete, $num_Ns, $num_oth, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
         my $ntaccn_str  = $ntaccn;
-        $ntaccn_str  =~ s/\,/\\n/g;
+        $ntaccn_str  =~ s/\,/\n/g;
         $ntaccn_str .= "\n";
         if($num_Ns > 0) { 
-          $num_Ns_all_ct_H{$file} += $num_Ns;
+          $num_Ns_all_ct_H{$file}++;
           if(defined $N_list_file) { print OUTN $ntaccn_str; }
           if($incomplete =~ m/yes/) { $num_Ns_incomp_ct_H{$file} += $num_Ns; }
+          $nlist_n++;
         }
         if($num_oth > 0) { 
-          $num_oth_all_ct_H{$file} += $num_oth;
+          $num_oth_all_ct_H{$file}++;
           if(defined $ab_list_file) { print OUTAB $ntaccn_str; }
           if($incomplete =~ m/yes/) { $num_oth_incomp_ct_H{$file} += $num_oth; }
+          $nlist_ab++;
         }
-        if($num_Ns  > 0) { push(@num_Ns_A, $line); }
-        if($num_oth > 0) { push(@num_oth_A, $line); }
-        if($t1 != 0) { push(@t1_A, $line); }
-        if($t2 != 0) { push(@t2_A, $line); }
-        if($t3 != 0) { push(@t3_A, $line); }
-        if($t4 != 0) { push(@t4_A, $line); }
-        if($t5 != 0) { push(@t5_A, $line); }
-        if($t6 != 0) { push(@t6_A, $line); }
-        if($t7 != 0) { push(@t7_A, $line); }
-        if($t8 != 0) { push(@t8_A, $line); }
+        my $fail_flag = 0;
+        if($t1 != 0) { $fail_flag = 1; $nfail_t1++; if(defined $t1_fail_file) { print OUTT1 $ntaccn_str; } }
+        if($t2 != 0) { $fail_flag = 1; $nfail_t2++; if(defined $t2_fail_file) { print OUTT1 $ntaccn_str; } }
+        if($t3 != 0) { $fail_flag = 1; $nfail_t3++; if(defined $t3_fail_file) { print OUTT1 $ntaccn_str; } }
+        if($t4 != 0) { $fail_flag = 1; $nfail_t4++; if(defined $t4_fail_file) { print OUTT1 $ntaccn_str; } }
+        if($t5 != 0) { $fail_flag = 1; $nfail_t5++; if(defined $t5_fail_file) { print OUTT1 $ntaccn_str; } }
+        if($t6 != 0) { $fail_flag = 1; $nfail_t6++; if(defined $t6_fail_file) { print OUTT1 $ntaccn_str; } }
+        if($t7 != 0) { $fail_flag = 1; $nfail_t7++; if(defined $t7_fail_file) { print OUTT1 $ntaccn_str; } }
+        if($t8 != 0) { $fail_flag = 1; $nfail_t8++; if(defined $t8_fail_file) { print OUTT1 $ntaccn_str; } }
+        if($fail_flag) { $nfail_any++; if(defined $any_fail_file) { print OUTANY $ntaccn_str; } }
       }
       else { 
         die "ERROR unable to parse line in $file: $line";
@@ -217,23 +226,57 @@ while(my $line = <LIST>) {
 #             num-pass  num-fail                        T1     T2 
 #  filename   tot inc   tot  inc  num-w-Ns num-w-oth tot inc tot inc ...
 
-  printf("%-50s  %4d %4d  %4d %4d  %4d %4d  %4d %4d  %4d %4d  %4d %4d  %4d %4d  %4d %4d  %4d %4d  %4d %4d  %4d %4d  %4d %4d\n",
-         $file, 
+  printf("%-50s  %4d %4d  %4d %4d  %9d  %9d  %4d  %4d  %4d  %4d  %4d  %4d  %4d  %4d\n",
+         $file2print, 
          $pass_all_ct_H{$file},    $pass_incomp_ct_H{$file},
          $fail_all_ct_H{$file},    $fail_incomp_ct_H{$file},
-         $num_Ns_all_ct_H{$file},  $num_Ns_incomp_ct_H{$file},
-         $num_oth_all_ct_H{$file}, $num_oth_incomp_ct_H{$file},
-         $t1_all_ct_H{$file},      $t1_incomp_ct_H{$file},      
-         $t2_all_ct_H{$file},      $t2_incomp_ct_H{$file},      
-         $t3_all_ct_H{$file},      $t3_incomp_ct_H{$file},      
-         $t4_all_ct_H{$file},      $t4_incomp_ct_H{$file},      
-         $t5_all_ct_H{$file},      $t5_incomp_ct_H{$file},      
-         $t6_all_ct_H{$file},      $t6_incomp_ct_H{$file},      
-         $t7_all_ct_H{$file},      $t7_incomp_ct_H{$file},      
-         $t8_all_ct_H{$file},      $t8_incomp_ct_H{$file});      
+         $num_Ns_all_ct_H{$file},  
+         $num_oth_all_ct_H{$file}, 
+         $t1_all_ct_H{$file},      
+         $t2_all_ct_H{$file},      
+         $t3_all_ct_H{$file},      
+         $t4_all_ct_H{$file},      
+         $t5_all_ct_H{$file},      
+         $t6_all_ct_H{$file},      
+         $t7_all_ct_H{$file},      
+         $t8_all_ct_H{$file});      
+
+  $pass_all_ct    += $pass_all_ct_H{$file};
+  $pass_incomp_ct += $pass_incomp_ct_H{$file};
+  $fail_all_ct    += $fail_all_ct_H{$file};
+  $fail_incomp_ct += $fail_incomp_ct_H{$file};
 }
+
+printf("%-50s  %4d %4d  %4d %4d  %9d  %9d  %4d  %4d  %4d  %4d  %4d  %4d  %4d  %4d\n",
+       "# total", 
+       $pass_all_ct,  $pass_incomp_ct, 
+       $fail_all_ct,  $fail_incomp_ct,
+       $nlist_n, $nlist_ab,
+       $nfail_t1, 
+       $nfail_t2, 
+       $nfail_t3, 
+       $nfail_t4, 
+       $nfail_t5, 
+       $nfail_t6, 
+       $nfail_t7, 
+       $nfail_t8);
+
 print("#\n");
 foreach my $line (@extra_lines_A) { 
   print $line;
+}
+if(defined $outroot) { 
+  print("#\n");
+  close(OUTN);   printf("# Saved list of %4d accessions with > 0 Ns to $N_list_file\n", $nlist_n);
+  close(OUTAB);  printf("# Saved list of %4d accessions with > 0 non-N ambiguous characters to $ab_list_file\n", $nlist_ab);
+  close(OUTT1);  printf("# Saved list of %4d accessions that failed test 1 to $t1_fail_file\n", $nfail_t1);
+  close(OUTT2);  printf("# Saved list of %4d accessions that failed test 1 to $t2_fail_file\n", $nfail_t2);
+  close(OUTT3);  printf("# Saved list of %4d accessions that failed test 1 to $t3_fail_file\n", $nfail_t3);
+  close(OUTT4);  printf("# Saved list of %4d accessions that failed test 1 to $t4_fail_file\n", $nfail_t4);
+  close(OUTT5);  printf("# Saved list of %4d accessions that failed test 1 to $t5_fail_file\n", $nfail_t5);
+  close(OUTT6);  printf("# Saved list of %4d accessions that failed test 1 to $t6_fail_file\n", $nfail_t6);
+  close(OUTT7);  printf("# Saved list of %4d accessions that failed test 1 to $t7_fail_file\n", $nfail_t7);
+  close(OUTT8);  printf("# Saved list of %4d accessions that failed test 1 to $t8_fail_file\n", $nfail_t8);
+  close(OUTANY); printf("# Saved list of %4d accessions that failed any of the 8 tests to $any_fail_file\n", $nfail_any);
 }
 close(LIST);
