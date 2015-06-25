@@ -23,7 +23,8 @@ while($file = <IN>) {
   # NOTE THAT WE DO NOT REMOVE THE DIR PATH, SO ERR AND OUT FILES WILL BE PLACED IN SAME DIR AS FASTA FILE
   $root =~ s/\.fa$//;
   $jobname = $root;
+  $jobname =~ s/^.+\///;
   $errfile = $root . ".cds-test.err";
   $outfile = $root . ".cds-test";
-  printf("qsub -N $jobname -b y -v SGE_FACILITIES -P unified -S /bin/bash -cwd -V -j n -o /dev/null -e $errfile -m n \"perl $edir/esl-test-cds-translate-vs-fetch.pl $options $file > $file.name_accn.report\"\n");
+  printf("qsub -N $jobname -b y -v SGE_FACILITIES -P unified -S /bin/bash -cwd -V -j n -o /dev/null -e $errfile -m n \"perl $edir/esl-test-cds-translate-vs-fetch.pl $options $file > $outfile\"\n");
 }
