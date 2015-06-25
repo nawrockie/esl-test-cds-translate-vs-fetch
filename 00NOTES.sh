@@ -55,15 +55,16 @@ perl esl-test-cds-translate-vs-fetch.pl sample.cds.fa
 # Output:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## Complete CDS:
-##protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-#AAH45158.1                       no      1     867        0        0      0    0    0    0    0    1    0    0    fail      # position 241 mismatch A ne P (translated ne fetched)
+##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
+#AAH45158.1          BC045158.1           4       870     867      1    +           no      1        0        0      0    0    0    0    0    1    0    0    f#ail      # position 241 mismatch A ne P (translated ne fetched)
 ##
-##protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-## num-fails-complete             no      -       -        -        -      0    0    0    0    0    1    0    0    N/A
-## num-fails-incomplete          yes      -       -        -        -      0    0    0    0    0    0    0    0    N/A
-## num-fails-all                   -      -       -        -        -      0    0    0    0    0    1    0    0    N/A
 ##
 ## Summary:
+##
+## category                 T1   T2   T3   T4   T5   T6   T7   T8
+## num-fails-complete        0    0    0    0    0    1    0    0
+## num-fails-incomplete      0    0    0    0    0    0    0    0
+## num-fails-all             0    0    0    0    0    1    0    0
 ##
 ## category    num-pass  num-fail  fract-fail
 ## complete           1         1      0.5000
@@ -116,37 +117,38 @@ perl esl-test-cds-translate-vs-fetch.pl -incompare sample.cds.compare.fa
 # Output:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## Complete CDS:
-##protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-#BAF36015.1                       no      1    1203        0        1      0    0    0    0    0    0    0    0    pass     
-#BAM75936.1                       no      1     648        0        2      0    0    0    0    0    0    0    0    pass     
-#BAM76062.1                       no      1     681        0        1      0    0    0    0    0    0    0    0    pass     
-#ABR22132.1                       no      1     465        0        1      0    0    0    0    0    0    0    0    pass     
-#ACH57653.1                       no      1    2505        0        2      0    0    0    0    0    0    0    0    pass     
-#ACH57659.1                       no      1    2532        0        4      0    0    0    0    0    0    0    0    pass     
-#ACH57806.1                       no      1    2418        0        1      0    0    0    0    0    0    0    0    pass     
-#ACI47735.1                       no      1     681        0        1      0    0    0    0    0    0    0    0    pass     
-#ACI47743.1                       no      1     681        0        2      0    0    0    0    0    0    0    0    pass     
-#ACI47747.1                       no      1     681        0        2      0    0    0    0    0    0    0    0    pass     
-#ACI47763.1                       no      1     681        0        2      0    0    0    0    0    0    0    0    pass     
-#ACI47670.1                       no      1     681        0        1      0    0    0    0    0    0    0    0    pass     
-#ACI47696.1                       no      1     681        0        2      0    0    0    0    0    0    0    0    pass     
-#ACI47700.1                       no      1     681        0        2      0    0    0    0    0    0    0    0    pass     
-#ACM40683.1                       no      1     465        0        3      0    0    0    0    0    0    0    0    pass     
-#ACM40751.1                       no      1    2499        0        1      0    0    0    0    0    0    0    0    pass     
-#ACV40978.2                       no      1     639        5        0      0    0    0    0    0    0    0    0    pass     
-#ACT90880.1                       no      1    2538        0        8      0    0    0    0    0    0    0    0    pass     
-#ACX36142.1                       no      1    2532        0        4      0    0    0    0    0    0    0    0    pass     
-#AHV89638.1                       no      1     465        0        2      0    0    0    0    0    0    0    0    pass     
-#AIJ01391.1                       no      1    2532        0        1      0    0    0    0    0    0    0    0    pass     
-#AIJ19251.1                       no      1    9045        0      190      0    0    1    0    1    0    0    0    fail     
-#AIW52360.1                       no      1     678        0        1      0    0    0    0    0    0    0    0    pass     
+##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
+#BAF36015.1          AB246335             1      3221    1203      2    +           no      1        0        1      0    0    0    0    0    0    0    0    pass     
+#BAM75936.1          AB674404           155       802     648      1    +           no      1        0        2      0    0    0    0    0    0    0    0    pass     
+#BAM76062.1          AB674437           122       802     681      1    +           no      1        0        1      0    0    0    0    0    0    0    0    pass     
+#ABR22132.1          DQ993694          1374      1838     465      1    +           no      1        0        1      0    0    0    0    0    0    0    0    pass     
+#ACH57653.1          EU939553             1      3188    2505      2    +           no      1        0        2      0    0    0    0    0    0    0    0    pass     
+#ACH57659.1          EU939555             1      3215    2532      2    +           no      1        0        4      0    0    0    0    0    0    0    0    pass     
+#ACH57806.1          EU939602             1      3101    2418      2    +           no      1        0        1      0    0    0    0    0    0    0    0    pass     
+#ACI47735.1          FJ023633           155       835     681      1    +           no      1        0        1      0    0    0    0    0    0    0    0    pass     
+#ACI47743.1          FJ023637           155       835     681      1    +           no      1        0        2      0    0    0    0    0    0    0    0    pass     
+#ACI47747.1          FJ023639           155       835     681      1    +           no      1        0        2      0    0    0    0    0    0    0    0    pass     
+#ACI47763.1          FJ023648           155       835     681      1    +           no      1        0        2      0    0    0    0    0    0    0    0    pass     
+#ACI47670.1          FJ023659           155       835     681      1    +           no      1        0        1      0    0    0    0    0    0    0    0    pass     
+#ACI47696.1          FJ023672           155       835     681      1    +           no      1        0        2      0    0    0    0    0    0    0    0    pass     
+#ACI47700.1          FJ023674           155       835     681      1    +           no      1        0        2      0    0    0    0    0    0    0    0    pass     
+#ACM40683.1          FJ562290          1374      1838     465      1    +           no      1        0        3      0    0    0    0    0    0    0    0    pass     
+#ACM40751.1          FJ562309             1      3182    2499      2    +           no      1        0        1      0    0    0    0    0    0    0    0    pass     
+#ACV40978.2          FJ589068          1770      2408     639      1    +           no      1        5        0      0    0    0    0    0    0    0    0    pass     
+#ACT90880.1          FJ692589             1      3213    2538      2    +           no      1        0        8      0    0    0    0    0    0    0    0    pass     
+#ACX36142.1          GQ377550             1      3215    2532      2    +           no      1        0        4      0    0    0    0    0    0    0    0    pass     
+#AHV89638.1          KJ173280          1374      1838     465      1    +           no      1        0        2      0    0    0    0    0    0    0    0    pass     
+#AIJ01391.1          KJ638663             1      3215    2532      2    +           no      1        0        1      0    0    0    0    0    0    0    0    pass     
+#AIJ19251.1          KM102767           342      9386    9045      1    +           no      1        0      190      0    0    1    0    1    0    0    0    fail     
+#AIW52360.1          KM359477           155       832     678      1    +           no      1        0        1      0    0    0    0    0    0    0    0    #ass     
 ##
-##protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-## num-fails-complete             no      -       -        -        -      0    0    1    0    1    0    0    0    N/A
-## num-fails-incomplete          yes      -       -        -        -      0    0    0    0    0    0    0    0    N/A
-## num-fails-all                   -      -       -        -        -      0    0    1    0    1    0    0    0    N/A
 ##
 ## Summary:
+##
+## category                 T1   T2   T3   T4   T5   T6   T7   T8
+## num-fails-complete        0    0    1    0    1    0    0    0
+## num-fails-incomplete      0    0    0    0    0    0    0    0
+## num-fails-all             0    0    1    0    1    0    0    0
 ##
 ## category    num-pass  num-fail  fract-fail
 ## complete         176         1      0.0056
@@ -233,5 +235,5 @@ perl esl-test-cds-translate-vs-fetch.pl -incompare sample.cds.compare.fa
 # as this is the default value for codon_start in NCBI annotation.
 #
 ##############################################
-# Last updated: EPN, Tue Jun 23 14:20:43 2015
+# Last updated: EPN, Thu Jun 25 15:05:02 2015
 ##############################################
