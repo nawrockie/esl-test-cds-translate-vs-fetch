@@ -38,7 +38,7 @@ source /panfs/pan1/dnaorg/programs/setup-bio-easel.csh.sh
 #######################
 # Usage and options
 #######################
-#esl-test-cds-against-aa.pl [OPTIONS] <input fasta file output from esl-fetch-cds.pl>
+#esl-test-cds-translate-vs-fetch.pl [OPTIONS] <input fasta file output from esl-fetch-cds.pl>
 #	OPTIONS:
 #		-v         : be verbose; output translated and fetched protein sequences
 #		-a         : print all sequences, even those that pass all tests and have 0 ambig chars
