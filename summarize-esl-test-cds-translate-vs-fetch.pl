@@ -10,14 +10,15 @@
 use strict;
 use Getopt::Long;
 
-my $in_listfile      = "";  # name of input file to 
+my $in_listfile = "";    # name of input file to 
+my $outroot     = undef; # changed with -oroot <s>
 
-#&GetOptions( "v"         => \$do_verbose, 
+&GetOptions( "oroot=s" => \$outroot);
 
 my $usage;
-$usage  = "summarize-esl-test-cds-translate-vs-fetch.pl [OPTIONS] <file with list of multiple esl-test-cds-againstinput fasta file output from esl-fetch-cds.pl>\n";
-#$usage .= "\tOPTIONS:\n";
-#$usage .= "\t\t-v         : be verbose; output translated and fetched protein sequences\n";
+$usage  = "summarize-esl-test-cds-translate-vs-fetch.pl [OPTIONS] <file with list of multiple esl-test-cds-against input fasta file output from esl-fetch-cds.pl>\n";
+$usage .= "\tOPTIONS:\n";
+$usage .= "\t\t-oroot <s>: output sequences that fail each test to <s>.T<n>.fail-list and seqs that fail any test to <s>.any.fail-list\n";
 
 if(scalar(@ARGV) != 1) { die $usage; }
 ($in_listfile) = @ARGV;
@@ -67,6 +68,43 @@ my @t8_A = ();
 my @file_A = (); # list of file names, as read from $in_listfile
 # open list file and parse each file listed in it
 
+# open output files, if nec:
+my $N_list_file   = undef;
+my $ab_list_file  = undef;
+my $t1_fail_file  = undef;
+my $t2_fail_file  = undef;
+my $t3_fail_file  = undef;
+my $t4_fail_file  = undef;
+my $t5_fail_file  = undef;
+my $t6_fail_file  = undef;
+my $t7_fail_file  = undef;
+my $t8_fail_file  = undef;
+my $any_fail_file = undef;
+
+if(defined $outroot) { 
+  $N_list_file   = $outroot . ".Ns.list";
+  $ab_list_file  = $outroot . ".ab.list";
+  $t1_fail_file  = $outroot . ".T1.fail-list";
+  $t2_fail_file  = $outroot . ".T2.fail-list";
+  $t3_fail_file  = $outroot . ".T3.fail-list";
+  $t4_fail_file  = $outroot . ".T4.fail-list";
+  $t5_fail_file  = $outroot . ".T5.fail-list";
+  $t6_fail_file  = $outroot . ".T6.fail-list";
+  $t7_fail_file  = $outroot . ".T7.fail-list";
+  $t8_fail_file  = $outroot . ".T8.fail-list";
+  $any_fail_file = $outroot . ".any.fail-list";
+  open(OUTN,  ">" . $N_list_file)  || die "ERROR unable to open $N_list_file for writing"; 
+  open(OUTAB, ">" . $ab_list_file) || die "ERROR unable to open $ab_list_file for writing"; 
+  open(OUTT1, ">" . $t1_fail_file) || die "ERROR unable to open $t1_fail_file for writing"; 
+  open(OUTT2, ">" . $t2_fail_file) || die "ERROR unable to open $t2_fail_file for writing"; 
+  open(OUTT3, ">" . $t3_fail_file) || die "ERROR unable to open $t3_fail_file for writing"; 
+  open(OUTT4, ">" . $t4_fail_file) || die "ERROR unable to open $t4_fail_file for writing"; 
+  open(OUTT5, ">" . $t5_fail_file) || die "ERROR unable to open $t5_fail_file for writing"; 
+  open(OUTT6, ">" . $t6_fail_file) || die "ERROR unable to open $t6_fail_file for writing"; 
+  open(OUTT7, ">" . $t7_fail_file) || die "ERROR unable to open $t7_fail_file for writing"; 
+  open(OUTT8, ">" . $t8_fail_file) || die "ERROR unable to open $t8_fail_file for writing"; 
+}
+
 my $header_line1 = sprintf("%-50s  %9s  %9s  %9s  %9s  %-9s  %-9s  %-9s  %-9s  %-9s  %-9s  %-9s  %-9s\n", 
                            "#", "num-pass", "num-fail", "num-w-Ns", "num-w-oth", "    T1", "    T2", "    T3", "    T4", "    T5", "    T6", "    T7", "    T8");
 my $header_line2 = sprintf("%-50s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s  %4s %4s\n",
@@ -103,14 +141,20 @@ while(my $line = <LIST>) {
   while($line = <IN>) { 
     if($line !~ /^\#/) { 
       #AAO63223.1                       no      1    1509        0        2      0    0    0    0    0    0    0    0    pass     
-      if($line =~ /^\S+\s+(\S+)\s+\d+\s+\d+\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/) { 
-        my ($incomplete, $num_Ns, $num_oth, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+      if($line =~ /^(\S+)\s+(\S+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\S\s+(\S+)\s+\d\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/)
+      { 
+        my ($paccn, $ntaccn, $incomplete, $num_Ns, $num_oth, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+        my $ntaccn_str  = $ntaccn;
+        $ntaccn_str  =~ s/\,/\\n/g;
+        $ntaccn_str .= "\n";
         if($num_Ns > 0) { 
           $num_Ns_all_ct_H{$file} += $num_Ns;
+          if(defined $N_list_file) { print OUTN $ntaccn_str; }
           if($incomplete =~ m/yes/) { $num_Ns_incomp_ct_H{$file} += $num_Ns; }
         }
         if($num_oth > 0) { 
           $num_oth_all_ct_H{$file} += $num_oth;
+          if(defined $ab_list_file) { print OUTAB $ntaccn_str; }
           if($incomplete =~ m/yes/) { $num_oth_incomp_ct_H{$file} += $num_oth; }
         }
         if($num_Ns  > 0) { push(@num_Ns_A, $line); }
@@ -128,7 +172,7 @@ while(my $line = <LIST>) {
         die "ERROR unable to parse line in $file: $line";
       }
     } # end of 'if($line !~ /^\#/)'
-    if($line =~ /^\# num-fails-incomplete\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/) { 
+    if($line =~ /^\# num-fails-incomplete\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/) { 
       # num-fails-incomplete          yes      -       -        -        -      0    0    0    0    0    0    0    0    N/A
       $t1_incomp_ct_H{$file} = $1;
       $t2_incomp_ct_H{$file} = $2;
@@ -139,7 +183,7 @@ while(my $line = <LIST>) {
       $t7_incomp_ct_H{$file} = $7;
       $t8_incomp_ct_H{$file} = $8;
     }
-    if($line =~ /^\# num-fails-all\s+\S+\s+\S+\s+\S+\s+\S+\s+\S+\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/) { 
+    if($line =~ /^\# num-fails-all\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/) { 
       # num-fails-all                   -      -       -        -        -      0    0    0    0    0    0    0    0    N/A
       $t1_all_ct_H{$file} = $1;
       $t2_all_ct_H{$file} = $2;

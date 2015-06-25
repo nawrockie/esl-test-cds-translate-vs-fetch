@@ -532,9 +532,11 @@ sub characterizeCDS {
   my $max_coord = undef;  # max position coordinate 
   for($p = 0; $p < scalar(@cds_name_A); $p+=4) { 
     my ($nt_accn, $start, $stop, $strand) = ($cds_name_A[$p], $cds_name_A[($p+1)], $cds_name_A[($p+2)], $cds_name_A[($p+3)]);
-    if($nt_accn_string ne "") { $nt_accn_string .= ","; }
-    $nt_accn_string .= $nt_accn;
-
+    # only add this accession to our string of all accns if we haven't already done so.
+    if($nt_accn_string !~ m/\Q$nt_accn/) { 
+      if($nt_accn_string ne "") { $nt_accn_string .= ","; }
+      $nt_accn_string .= $nt_accn;
+    }
     if($start =~ /^\<\d+$/) { 
       if($exon != 1) { die "ERROR start incomplete at exon \#$exon (should only be possible at exon 1)\n"; }
       $ic_start = 1; 
