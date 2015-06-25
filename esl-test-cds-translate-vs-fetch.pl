@@ -62,14 +62,12 @@ my $ncomplete        = 0; # number of complete CDS, total
 my $nincomplete      = 0; # number of incomplete CDS, total
 my $ncomplete_fail   = 0; # number of complete CDS that had at least 1 failure
 my $nincomplete_fail = 0; # number of incomplete CDS that had at least 1 failure
-my $header_line = sprintf("%-22s  %11s  %5s  %6s  %7s  %7s  ", "#protein-accession", "incomplete?", "start", "tr-len", "num-Ns", "num-oth");
 my $last_test = ($do_subset) ? $nsub : $nall;
-for(my $i = 0; $i < $last_test; $i++) { 
-  $header_line .= sprintf("   T%d", ($i+1)); 
-  $complete_nfail_A[$i]   = 0;
-  $incomplete_nfail_A[$i] = 0;
-}
-$header_line .= "    pass/fail\n";
+my $paccn_w   = length("protein-accession");
+my $ntaccn_w  = length("nt-accession");
+
+#$paccn_w  = 22;
+#$ntaccn_w = 22;
 
 # for each sequence in $in_fafile:
 # 1. fetch the CDS sequence from $in_fafile
@@ -84,6 +82,12 @@ my @icstart_toprint_A = (); # array of output lines for incomplete CDS, incomple
 my @icstop_toprint_A  = (); # array of output lines for incomplete CDS, complete start, incomplete stop
 my @icboth_toprint_A  = (); # array of output lines for incomplete CDS, incomplete start, incomplete stop
 my $toprint;
+
+# initialize
+for(my $i = 0; $i < $last_test; $i++) { 
+  $complete_nfail_A[$i]   = 0;
+  $incomplete_nfail_A[$i] = 0;
+}
 
 # for each sequence in $in_fafile:
 for(my $i = 0; $i < $nseq; $i++) { 
@@ -108,18 +112,18 @@ for(my $i = 0; $i < $nseq; $i++) {
   if($cds_name ne $cds_name2) { die "ERROR, unexpected error, name mismatch ($cds_name ne $cds_name2)"; }
 
   # 1. isolate the protein accession and codon_start value
-  my $prot_name;
+  my $paccn;
   my $codon_start;
   if($do_compare_input) { 
-    $prot_name = $cds_desc;
+    $paccn = $cds_desc;
     # NC_004004:1059:8027:+: product:pol protein protein_id:ref|NP_658990.1| codon_start:none-annotated
-    $prot_name =~ s/^.+protein\_id\://;
+    $paccn =~ s/^.+protein\_id\://;
     # ref|NP_658990.1| codon_start:none-annotated
-    $prot_name =~ s/\s+.+$//;
+    $paccn =~ s/\s+.+$//;
     # ref|NP_658990.1|
-    $prot_name =~ s/^\w+\|//;
+    $paccn =~ s/^\w+\|//;
     # NP_658990.1|
-    $prot_name =~ s/\|.*$//;
+    $paccn =~ s/\|.*$//;
     # NP_658990.1
 
     $codon_start = $cds_desc;
@@ -136,11 +140,11 @@ for(my $i = 0; $i < $nseq; $i++) {
     }
   }
   else { # default case 
-    $prot_name = $cds_name;
+    $paccn = $cds_name;
     # >AAC62262.1:codon_start1:AC005031.1:55514:55564:-:AC005031.1:61328:61438:-
-    $prot_name =~ s/^\>//;
+    $paccn =~ s/^\>//;
     # AAC62262.1:codon_start1:AC005031.1:55514:55564:-:AC005031.1:61328:61438:-
-    $prot_name =~ s/\:.+$//;
+    $paccn =~ s/\:.+$//;
     # AAC62262.1
     
     $codon_start = $cds_name;
@@ -155,20 +159,16 @@ for(my $i = 0; $i < $nseq; $i++) {
   }
 
   # 2. determine if CDS sequence is incomplete on 5' and/or 3' end
-  my ($ic_start, $ic_stop);
-  if($do_compare_input) { 
-    ($ic_start, $ic_stop) = isCDSIncomplete($cds_desc, $do_compare_input);
-  }
-  else { #default
-    ($ic_start, $ic_stop) = isCDSIncomplete($cds_name, $do_compare_input);
-  }
+  my $cds_name_or_desc = ($do_compare_input) ? $cds_desc : $cds_name;
+  my ($accn_coord_strand_str, $ic_start, $ic_stop) = characterizeCDS($cds_name_or_desc, $do_compare_input);
+  my ($ntaccn, $mincoord, $maxcoord, $nexon, $strand2print) = split(":::", $accn_coord_strand_str);
 
   # 3. translate the CDS sequence
   my ($prot_translated, $n_N, $n_nonACGTN) = translateDNA($cds_seq, $codon_start);
 
   # 4. fetch the protein sequence using idfetch
-  # remove 'version' from $prot_name
-  my $prot_acconly = $prot_name;
+  # remove 'version' from $paccn
+  my $prot_acconly = $paccn;
   $prot_acconly =~ s/\.\d+$//;
   # need to create a temporary file with the accession for idfetch
   my $tmp_acc_file = "tmp.$prot_acconly.acc";
@@ -272,7 +272,7 @@ for(my $i = 0; $i < $nseq; $i++) {
         $nmismatch++;
         if($errmsg ne "") { $errmsg .= "; "; }
         $errmsg .= sprintf("position %d mismatch %s ne %s (translated ne fetched)", $p+1, $translated_A[$p], $fetched_A[$p]);
-        if($do_verbose) { print $prot_name . " " . $errmsg . "\n"; }
+        if($do_verbose) { print $paccn . " " . $errmsg . "\n"; }
       }
     }
   }
@@ -328,7 +328,11 @@ for(my $i = 0; $i < $nseq; $i++) {
   }
 
   if($do_all || $any_fails || ($n_N > 0) || ($n_nonACGTN > 0)) { 
-    $toprint = sprintf("%-22s  %11s  %5d  %6d  %7d  %7d  ", $prot_name, $incomplete, $codon_start, $cds_len_to_translate, $n_N, $n_nonACGTN);
+    $toprint = sprintf("%-*s  %-*s  %8d  %8d  %6d  %5d  %3s  %11s  %5d  %7d  %7d  ", 
+                       $paccn_w+1, $paccn, $ntaccn_w, $ntaccn, $mincoord, $maxcoord, $cds_len_to_translate, $nexon, $strand2print, 
+                       $incomplete, $codon_start, $n_N, $n_nonACGTN);
+    #if(length($paccn)  > $paccn_w)  { $paccn_w  = length($paccn); }
+    #if(length($ntaccn) > $ntaccn_w) { $ntaccn_w = length($ntaccn); }
     for(my $j = 0; $j < $last_test; $j++) { 
       $toprint .= sprintf(" %4d", $fail_A[$j]);
       if($fail_A[$j]) { 
@@ -356,6 +360,15 @@ for(my $i = 0; $i < $nseq; $i++) {
 # clean up
 if(-e $in_fafile . ".ssi") { unlink $in_fafile . ".ssi"; }
 $sqfile->close_sqfile();
+
+my $header_line = sprintf("%-*s  %-*s  %8s  %8s  %6s  %5s  %3s  %11s  %5s  %7s  %7s  ", 
+                          $paccn_w+1, "#protein-accession", $ntaccn_w, "nt-accession", 
+                          "mincoord", "maxcoord", "tr-len", "nexon", "str",
+                          "incomplete?", "start", "num-Ns", "num-oth");
+for(my $i = 0; $i < $last_test; $i++) { 
+  $header_line .= sprintf("   T%d", ($i+1)); 
+}
+$header_line .= "    pass/fail\n";
 
 # print output, first complete CDS, then incomplete
 if(scalar(@c_toprint_A) > 0) { 
@@ -385,28 +398,37 @@ if(! $skip_incompletes) {
   }
 }
 # print summary
-print $header_line;
-
-printf("%-22s  %11s  %5s  %6s  %7s  %7s  ", "# num-fails-complete", "no", "-", "-", "-", "-");
-for(my $j = 0; $j < $last_test; $j++) { 
-  printf(" %4d", $complete_nfail_A[$j]);
-}
-printf("    N/A\n");
-
-printf("%-22s  %11s  %5s  %6s  %7s  %7s  ", "# num-fails-incomplete", "yes", "-", "-", "-", "-");
-for(my $j = 0; $j < $last_test; $j++) { 
-  printf(" %4d", $incomplete_nfail_A[$j]);
-}
-printf("    N/A\n");
-
-printf("%-22s  %11s  %5s  %6s  %7s  %7s  ", "# num-fails-all", "-", "-", "-", "-", "-");
-for(my $j = 0; $j < $last_test; $j++) { 
-  printf(" %4d", $complete_nfail_A[$j] + $incomplete_nfail_A[$j]);
-}
-printf("    N/A\n");
 
 printf("#\n");
 printf("# Summary:\n");
+printf("#\n");
+
+my $header_line2 = sprintf("%-22s  ", "# category");
+for(my $i = 0; $i < $last_test; $i++) { 
+  $header_line2 .= sprintf("   T%d", ($i+1)); 
+}
+$header_line2 .= "\n";
+
+print $header_line2; 
+
+printf("%-22s  ", "# num-fails-complete", "no", "-", "-", "-", "-");
+for(my $j = 0; $j < $last_test; $j++) { 
+  printf(" %4d", $complete_nfail_A[$j]);
+}
+printf("\n");
+
+printf("%-22s  ", "# num-fails-incomplete", "yes", "-", "-", "-", "-");
+for(my $j = 0; $j < $last_test; $j++) { 
+  printf(" %4d", $incomplete_nfail_A[$j]);
+}
+printf("\n");
+
+printf("%-22s  ", "# num-fails-all", "-", "-", "-", "-", "-");
+for(my $j = 0; $j < $last_test; $j++) { 
+  printf(" %4d", $complete_nfail_A[$j] + $incomplete_nfail_A[$j]);
+}
+printf("\n");
+
 printf("#\n");
 printf("# category    num-pass  num-fail  fract-fail\n");
 printf("# complete    %8d  %8d  %10.4f\n", 
@@ -445,19 +467,21 @@ exit 0;
 ##############
 # SUBROUTINES 
 ##############
-# Subroutine: isCDSIncomplete()
+# Subroutine: characterizeCDS()
 # Args:       $cds_name_or_desc:  CDS sequence name
 #             $do_compare_input:  '1' if our input is from dnaorg_compare_genomes.pl ($cds_name_or_desc is cds desc)
 #                                 '0' for default input ($cds_name_or_desc is name)
-# Returns:    Two values:
-#             (1) $ic_start: '1' if sequence is incomplete at 'start'
-#             (2) $ic_stop:  '1' if sequence is incomplete at 'stop'
+# Returns:    Three values:
+#             (1) $accn_coord_strand_str: five pieces of information that we will eventually print
+#                 about this sequence: "<nt_accn(s)>:::<min_coord>:::<max_coord>:::<nexons>:::<strand>"
+#             (2) $ic_start: '1' if sequence is incomplete at 'start'
+#             (3) $ic_stop:  '1' if sequence is incomplete at 'stop'
 # Dies:       If we find an incomplete character ('>' or '<') at an
 #             unexpected position or we can't parse the $cds_name_or_desc
 #             for some other reason.
 #             
-sub isCDSIncomplete { 
-  my $sub_name = "isCDSIncomplete()";
+sub characterizeCDS {
+  my $sub_name = "characterizeCDS()";
   my $nargs_exp = 2;
   if(scalar(@_) != $nargs_exp) { die "ERROR $sub_name entered with wrong number of input args"; }
 
@@ -503,9 +527,14 @@ sub isCDSIncomplete {
   # determine number of exons
   if(scalar(@cds_name_A) % 4 != 0) { die "ERROR unable to parse $orig_cds_name_or_desc while trying to determine if it is incomplete"; }
   my $nexons = scalar(@cds_name_A) / 4;
+  my $nt_accn_string = "";
+  my $min_coord = undef;  # min position coordinate
+  my $max_coord = undef;  # max position coordinate 
   for($p = 0; $p < scalar(@cds_name_A); $p+=4) { 
-    my ($paccn, $start, $stop, $strand) = ($cds_name_A[$p], $cds_name_A[($p+1)], $cds_name_A[($p+2)], $cds_name_A[($p+3)]);
-    # printf("$start..$stop\n");
+    my ($nt_accn, $start, $stop, $strand) = ($cds_name_A[$p], $cds_name_A[($p+1)], $cds_name_A[($p+2)], $cds_name_A[($p+3)]);
+    if($nt_accn_string ne "") { $nt_accn_string .= ","; }
+    $nt_accn_string .= $nt_accn;
+
     if($start =~ /^\<\d+$/) { 
       if($exon != 1) { die "ERROR start incomplete at exon \#$exon (should only be possible at exon 1)\n"; }
       $ic_start = 1; 
@@ -527,6 +556,16 @@ sub isCDSIncomplete {
       die "ERROR, problem parsing $orig_cds_name_or_desc, multiple strands read!"; 
     }
     $exon++;
+
+    # printf("$start..$stop\n");
+    $start =~ s/\>//g;
+    $start =~ s/\<//g;
+    $stop  =~ s/\>//g;
+    $stop  =~ s/\<//g;
+    if((! defined $min_coord) || ($start < $min_coord)) { $min_coord = $start; }
+    if((! defined $min_coord) || ($stop  < $min_coord)) { $min_coord = $stop;  }
+    if((! defined $max_coord) || ($start > $max_coord)) { $max_coord = $start; }
+    if((! defined $max_coord) || ($stop  > $max_coord)) { $max_coord = $stop;  }
   }
   if($expected_strand eq "-") { # swap $ic_start and $ic_stop
     my $tmp = $ic_start;
@@ -536,7 +575,8 @@ sub isCDSIncomplete {
   elsif($expected_strand ne "+") { 
     die "ERROR, problem parsing $orig_cds_name_or_desc, no strand read"; 
   }
-  return ($ic_start, $ic_stop);
+  my $ret_accn_coord_nexon_strand_str = $nt_accn_string . ":::" . $min_coord . ":::" . $max_coord . ":::" . $nexons . ":::" . $expected_strand;
+  return ($ret_accn_coord_nexon_strand_str, $ic_start, $ic_stop);
 }
 
 # Subroutine: translateDNA()
