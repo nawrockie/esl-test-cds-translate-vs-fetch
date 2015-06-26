@@ -151,31 +151,33 @@ while(my $line = <LIST>) {
       if($line =~ /^(\S+)\s+(\S+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\S\s+(\S+)\s+\d\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/)
       { 
         my ($paccn, $ntaccn, $incomplete, $num_Ns, $num_oth, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
-        my $ntaccn_str  = $ntaccn;
-        $ntaccn_str  =~ s/\,/\n/g;
-        $ntaccn_str .= "\n";
+        my $outline = ""; # what we'll print to the output files
+        my @ntaccn_A = split(",", $ntaccn);
+        foreach my $indi_ntaccn (@ntaccn_A) { 
+          $outline .= "$paccn $indi_ntaccn\n";
+        }
         if($num_Ns > 0) { 
           $num_Ns_all_ct_H{$file}++;
-          if(defined $N_list_file) { print OUTN $ntaccn_str; }
+          if(defined $N_list_file) { print OUTN $outline; }
           if($incomplete =~ m/yes/) { $num_Ns_incomp_ct_H{$file} += $num_Ns; }
           $nlist_n++;
         }
         if($num_oth > 0) { 
           $num_oth_all_ct_H{$file}++;
-          if(defined $ab_list_file) { print OUTAB $ntaccn_str; }
+          if(defined $ab_list_file) { print OUTAB $outline; }
           if($incomplete =~ m/yes/) { $num_oth_incomp_ct_H{$file} += $num_oth; }
           $nlist_ab++;
         }
         my $fail_flag = 0;
-        if($t1 != 0) { $fail_flag = 1; $nfail_t1++; if(defined $t1_fail_file) { print OUTT1 $ntaccn_str; } }
-        if($t2 != 0) { $fail_flag = 1; $nfail_t2++; if(defined $t2_fail_file) { print OUTT1 $ntaccn_str; } }
-        if($t3 != 0) { $fail_flag = 1; $nfail_t3++; if(defined $t3_fail_file) { print OUTT1 $ntaccn_str; } }
-        if($t4 != 0) { $fail_flag = 1; $nfail_t4++; if(defined $t4_fail_file) { print OUTT1 $ntaccn_str; } }
-        if($t5 != 0) { $fail_flag = 1; $nfail_t5++; if(defined $t5_fail_file) { print OUTT1 $ntaccn_str; } }
-        if($t6 != 0) { $fail_flag = 1; $nfail_t6++; if(defined $t6_fail_file) { print OUTT1 $ntaccn_str; } }
-        if($t7 != 0) { $fail_flag = 1; $nfail_t7++; if(defined $t7_fail_file) { print OUTT1 $ntaccn_str; } }
-        if($t8 != 0) { $fail_flag = 1; $nfail_t8++; if(defined $t8_fail_file) { print OUTT1 $ntaccn_str; } }
-        if($fail_flag) { $nfail_any++; if(defined $any_fail_file) { print OUTANY $ntaccn_str; } }
+        if($t1 != 0) { $fail_flag = 1; $nfail_t1++; if(defined $t1_fail_file) { print OUTT1 $outline; } }
+        if($t2 != 0) { $fail_flag = 1; $nfail_t2++; if(defined $t2_fail_file) { print OUTT1 $outline; } }
+        if($t3 != 0) { $fail_flag = 1; $nfail_t3++; if(defined $t3_fail_file) { print OUTT1 $outline; } }
+        if($t4 != 0) { $fail_flag = 1; $nfail_t4++; if(defined $t4_fail_file) { print OUTT1 $outline; } }
+        if($t5 != 0) { $fail_flag = 1; $nfail_t5++; if(defined $t5_fail_file) { print OUTT1 $outline; } }
+        if($t6 != 0) { $fail_flag = 1; $nfail_t6++; if(defined $t6_fail_file) { print OUTT1 $outline; } }
+        if($t7 != 0) { $fail_flag = 1; $nfail_t7++; if(defined $t7_fail_file) { print OUTT1 $outline; } }
+        if($t8 != 0) { $fail_flag = 1; $nfail_t8++; if(defined $t8_fail_file) { print OUTT1 $outline; } }
+        if($fail_flag) { $nfail_any++; if(defined $any_fail_file) { print OUTANY $outline; } }
       }
       else { 
         die "ERROR unable to parse line in $file: $line";

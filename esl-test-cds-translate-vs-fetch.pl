@@ -354,8 +354,6 @@ for(my $i = 0; $i < $nseq; $i++) {
     elsif($ic_start == 0 && $ic_stop == 1) { push(@icstop_toprint_A,  $toprint); }
     elsif($ic_start == 1 && $ic_stop == 1) { push(@icboth_toprint_A,  $toprint); }
   }
-
-
 }
 # clean up
 if(-e $in_fafile . ".ssi") { unlink $in_fafile . ".ssi"; }
