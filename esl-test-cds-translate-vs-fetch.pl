@@ -94,7 +94,6 @@ push(@testdesc_A, "Translated CDS and fetched protein are identical length\n#   
 push(@testdesc_A, "Translated CDS and fetched protein are identical sequence\n#              (ignoring hangovers if lengths differ and final codon (if stop) and codons with ambiguous nts)"); 
 push(@testdesc_A, "No internal stops in translated CDS"); 
 push(@testdesc_A, "No internal stops in fetched protein"); 
-push(@testdesc_A, "CDS ends with a stop codon (or is annot. as incomplete on 3' end)"); 
 push(@testdesc_A, "CDS has a linked protein accession"); 
 
 # for each sequence in $in_fafile:
@@ -458,6 +457,16 @@ printf("# all         %8d  %8d  %10.4f\n",
 
 
 # print descriptions of each test:
+printf("#\n");
+printf("# A '0' in a T<n> column above indicates the sequence 'passed' the test.\n");
+printf("# A '1' in a T<n> column above indicates the sequence 'failed' the test.\n");
+printf("#\n");
+if($do_all) { 
+  printf("# Data printed for all sequences [due to -a option]\n");
+}
+else { 
+  printf("# Only data for sequences that fail >= 1 test OR have an ambiguous nucleotide in them are printed [change to all seqs with -a]\n");
+}
 printf("#\n");
 for(my $i = 0; $i < $last_test; $i++) { 
   printf("# Test %d (T%d): %s\n", $i+1, $i+1, $testdesc_A[$i]);

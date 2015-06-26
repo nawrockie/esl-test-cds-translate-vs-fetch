@@ -111,10 +111,11 @@ if(defined $outroot) {
   open(OUTANY, ">" . $any_fail_file) || die "ERROR unable to open $any_fail_file for writing"; 
 }
 
-my $header_line1 = sprintf("%-50s  %9s  %9s\n", 
-                           "#", "num-pass", "num-fail");
-my $header_line2 = sprintf("%-50s  %4s %4s  %4s %4s  %9s  %9s  %4s  %4s  %4s  %4s  %4s  %4s  %4s  %4s\n", 
-                           "# filename", "tot", "inc", "tot", "inc", "num-w-Ns", "num-w-oth", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8");
+my $filename_w = 63;
+my $header_line1 = sprintf("%-*s  %13s  %13s\n", 
+                           $filename_w, "#", "num-pass", "num-fail");
+my $header_line2 = sprintf("%-*s  %6s %6s  %6s %6s  %9s  %9s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n", 
+                           $filename_w, "# filename", "tot", "inc", "tot", "inc", "num-w-Ns", "num-w-oth", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8");
 
 print $header_line1; 
 print $header_line2; 
@@ -130,7 +131,7 @@ while(my $line = <LIST>) {
   if(! -s $file) { die "ERROR, unable to open $file listed in $in_listfile"; }
   # Lines we parse (except first one):
   #protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-  # AAO63223.1                       no      1    1509        0        2      0    0    0    0    0    0    0    0    pass     
+  # AAO63223.1                     no      1    1509        0        2      0    0    0    0    0    0    0    0    pass     
   # num-fails-complete             no      -       -        -        -      0    0    0    0    0    0    0    0    N/A
   # num-fails-incomplete          yes      -       -        -        -      0    0    0    0    0    0    0    0    N/A
   # num-fails-all                   -      -       -        -        -      0    0    0    0    0    0    0    0    N/A
@@ -228,7 +229,8 @@ while(my $line = <LIST>) {
 #             num-pass  num-fail                        T1     T2 
 #  filename   tot inc   tot  inc  num-w-Ns num-w-oth tot inc tot inc ...
 
-  printf("%-50s  %4d %4d  %4d %4d  %9d  %9d  %4d  %4d  %4d  %4d  %4d  %4d  %4d  %4d\n",
+  printf("%-*s  %6d %6d  %6d %6d  %9d  %9d  %5d  %5d  %5d  %5d  %5d  %5d  %5d  %5d\n",
+         $filename_w,
          $file2print, 
          $pass_all_ct_H{$file},    $pass_incomp_ct_H{$file},
          $fail_all_ct_H{$file},    $fail_incomp_ct_H{$file},
@@ -249,7 +251,8 @@ while(my $line = <LIST>) {
   $fail_incomp_ct += $fail_incomp_ct_H{$file};
 }
 
-printf("%-50s  %4d %4d  %4d %4d  %9d  %9d  %4d  %4d  %4d  %4d  %4d  %4d  %4d  %4d\n",
+printf("%-*s  %6d %6d  %6d %6d  %9d  %9d  %5d  %5d  %5d  %5d  %5d  %5d  %5d  %5d\n",
+       $filename_w,
        "# total", 
        $pass_all_ct,  $pass_incomp_ct, 
        $fail_all_ct,  $fail_incomp_ct,
@@ -264,6 +267,14 @@ printf("%-50s  %4d %4d  %4d %4d  %9d  %9d  %4d  %4d  %4d  %4d  %4d  %4d  %4d  %4
        $nfail_t8);
 
 print("#\n");
+print("# Explanation of column headings:\n");
+print("# 'num-pass':          'tot': number of gene sequences that pass all tests (T1 through T8); 'inc': subset that are 'incomplete' CDS\n");
+print("# 'num-fail':          'tot': number of gene sequences that fail >=1 test  (T1 through T8); 'inc': subset that are 'incomplete' CDS\n");
+print("# 'num-w-Ns':          total number of gene sequences that have >= 1 'N' ambiguous character\n");
+print("# 'num-w-oth':         total number of gene sequences that have >= 1 non-'N' ambiguous character\n");
+print("# 'T1'..'T<n>'..'T8':  total number of gene sequences that fail test <n>\n");
+print("#\n");
+
 foreach my $line (@extra_lines_A) { 
   print $line;
 }
@@ -272,13 +283,13 @@ if(defined $outroot) {
   close(OUTN);   printf("# Saved list of %4d accessions with > 0 Ns to $N_list_file\n", $nlist_n);
   close(OUTAB);  printf("# Saved list of %4d accessions with > 0 non-N ambiguous characters to $ab_list_file\n", $nlist_ab);
   close(OUTT1);  printf("# Saved list of %4d accessions that failed test 1 to $t1_fail_file\n", $nfail_t1);
-  close(OUTT2);  printf("# Saved list of %4d accessions that failed test 1 to $t2_fail_file\n", $nfail_t2);
-  close(OUTT3);  printf("# Saved list of %4d accessions that failed test 1 to $t3_fail_file\n", $nfail_t3);
-  close(OUTT4);  printf("# Saved list of %4d accessions that failed test 1 to $t4_fail_file\n", $nfail_t4);
-  close(OUTT5);  printf("# Saved list of %4d accessions that failed test 1 to $t5_fail_file\n", $nfail_t5);
-  close(OUTT6);  printf("# Saved list of %4d accessions that failed test 1 to $t6_fail_file\n", $nfail_t6);
-  close(OUTT7);  printf("# Saved list of %4d accessions that failed test 1 to $t7_fail_file\n", $nfail_t7);
-  close(OUTT8);  printf("# Saved list of %4d accessions that failed test 1 to $t8_fail_file\n", $nfail_t8);
+  close(OUTT2);  printf("# Saved list of %4d accessions that failed test 2 to $t2_fail_file\n", $nfail_t2);
+  close(OUTT3);  printf("# Saved list of %4d accessions that failed test 3 to $t3_fail_file\n", $nfail_t3);
+  close(OUTT4);  printf("# Saved list of %4d accessions that failed test 4 to $t4_fail_file\n", $nfail_t4);
+  close(OUTT5);  printf("# Saved list of %4d accessions that failed test 5 to $t5_fail_file\n", $nfail_t5);
+  close(OUTT6);  printf("# Saved list of %4d accessions that failed test 6 to $t6_fail_file\n", $nfail_t6);
+  close(OUTT7);  printf("# Saved list of %4d accessions that failed test 7 to $t7_fail_file\n", $nfail_t7);
+  close(OUTT8);  printf("# Saved list of %4d accessions that failed test 8 to $t8_fail_file\n", $nfail_t8);
   close(OUTANY); printf("# Saved list of %4d accessions that failed any of the 8 tests to $any_fail_file\n", $nfail_any);
 }
 close(LIST);
