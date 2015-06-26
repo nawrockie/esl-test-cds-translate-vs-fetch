@@ -55,16 +55,16 @@ perl esl-test-cds-translate-vs-fetch.pl sample.cds.fa
 # Output:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## Complete CDS:
-##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-#AAH45158.1          BC045158.1           4       870     867      1    +           no      1        0        0      0    0    0    0    0    1    0    0    f#ail      # position 241 mismatch A ne P (translated ne fetched)
+##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9    pass/fail
+#AAH45158.1          BC045158.1           4       870     867      1    +           no      1        0        0      0    0    0    0    0    1    0    0    0    fail      # position 241 mismatch A ne P (translated ne fetched)
 ##
 ##
 ## Summary:
 ##
-## category                 T1   T2   T3   T4   T5   T6   T7   T8
-## num-fails-complete        0    0    0    0    0    1    0    0
-## num-fails-incomplete      0    0    0    0    0    0    0    0
-## num-fails-all             0    0    0    0    0    1    0    0
+## category                 T1   T2   T3   T4   T5   T6   T7   T8   T9
+## num-fails-complete        0    0    0    0    0    1    0    0    0
+## num-fails-incomplete      0    0    0    0    0    0    0    0    0
+## num-fails-all             0    0    0    0    0    1    0    0    0
 ##
 ## category    num-pass  num-fail  fract-fail
 ## complete           1         1      0.5000
@@ -81,6 +81,7 @@ perl esl-test-cds-translate-vs-fetch.pl sample.cds.fa
 ##              (ignoring hangovers if lengths differ and final codon (if stop) and codons with ambiguous nts)
 ## Test 7 (T7): No internal stops in translated CDS
 ## Test 8 (T8): No internal stops in fetched protein
+## Test 9 (T9): CDS ends with a stop codon (or is annot. as incomplete on 3' end)
 ##
 ## Other non-obvious column meanings:
 ## "start":     codon_start annotation, CDS translation begins at this position of CDS (usually 1)
