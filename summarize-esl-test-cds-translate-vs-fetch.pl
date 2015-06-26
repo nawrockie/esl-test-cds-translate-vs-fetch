@@ -39,6 +39,7 @@ my %t5_all_ct_H = ();
 my %t6_all_ct_H = ();
 my %t7_all_ct_H = ();
 my %t8_all_ct_H = ();
+my %t9_all_ct_H = ();
 
 my %pass_incomp_ct_H = ();
 my %fail_incomp_ct_H = ();
@@ -52,6 +53,7 @@ my %t5_incomp_ct_H = ();
 my %t6_incomp_ct_H = ();
 my %t7_incomp_ct_H = ();
 my %t8_incomp_ct_H = ();
+my %t9_incomp_ct_H = ();
 
 # counts of totals across all files
 my $pass_all_ct = 0;
@@ -68,6 +70,7 @@ my $nfail_t5 = 0;
 my $nfail_t6 = 0;
 my $nfail_t7 = 0;
 my $nfail_t8 = 0;
+my $nfail_t9 = 0;
 my $nfail_any = 0;
 
 my @file_A = (); # list of file names, as read from $in_listfile
@@ -84,6 +87,7 @@ my $t5_fail_file  = undef;
 my $t6_fail_file  = undef;
 my $t7_fail_file  = undef;
 my $t8_fail_file  = undef;
+my $t9_fail_file  = undef;
 my $any_fail_file = undef;
 
 if(defined $outroot) { 
@@ -97,6 +101,7 @@ if(defined $outroot) {
   $t6_fail_file  = $outroot . ".T6.fail-list";
   $t7_fail_file  = $outroot . ".T7.fail-list";
   $t8_fail_file  = $outroot . ".T8.fail-list";
+  $t9_fail_file  = $outroot . ".T9.fail-list";
   $any_fail_file = $outroot . ".any.fail-list";
   open(OUTN,   ">" . $N_list_file)   || die "ERROR unable to open $N_list_file for writing"; 
   open(OUTAB,  ">" . $ab_list_file)  || die "ERROR unable to open $ab_list_file for writing"; 
@@ -108,14 +113,15 @@ if(defined $outroot) {
   open(OUTT6,  ">" . $t6_fail_file)  || die "ERROR unable to open $t6_fail_file for writing"; 
   open(OUTT7,  ">" . $t7_fail_file)  || die "ERROR unable to open $t7_fail_file for writing"; 
   open(OUTT8,  ">" . $t8_fail_file)  || die "ERROR unable to open $t8_fail_file for writing"; 
+  open(OUTT9,  ">" . $t9_fail_file)  || die "ERROR unable to open $t9_fail_file for writing"; 
   open(OUTANY, ">" . $any_fail_file) || die "ERROR unable to open $any_fail_file for writing"; 
 }
 
 my $filename_w = 63;
 my $header_line1 = sprintf("%-*s  %13s  %13s\n", 
                            $filename_w, "#", "num-pass", "num-fail");
-my $header_line2 = sprintf("%-*s  %6s %6s  %6s %6s  %9s  %9s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n", 
-                           $filename_w, "# filename", "tot", "inc", "tot", "inc", "num-w-Ns", "num-w-oth", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8");
+my $header_line2 = sprintf("%-*s  %6s %6s  %6s %6s  %9s  %9s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n", 
+                           $filename_w, "# filename", "tot", "inc", "tot", "inc", "num-w-Ns", "num-w-oth", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9");
 
 print $header_line1; 
 print $header_line2; 
@@ -130,16 +136,15 @@ while(my $line = <LIST>) {
   $file2print =~ s/^.+\///;
   if(! -s $file) { die "ERROR, unable to open $file listed in $in_listfile"; }
   # Lines we parse (except first one):
-  #protein-accession      incomplete?  start  tr-len   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8    pass/fail
-  # AAO63223.1                     no      1    1509        0        2      0    0    0    0    0    0    0    0    pass     
-  # num-fails-complete             no      -       -        -        -      0    0    0    0    0    0    0    0    N/A
-  # num-fails-incomplete          yes      -       -        -        -      0    0    0    0    0    0    0    0    N/A
-  # num-fails-all                   -      -       -        -        -      0    0    0    0    0    0    0    0    N/A
+  ##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9    pass/fail
+  #AAO63223.1          AY173956            37      1545    1509      1    +           no      1        0        2      0    0    0    0    0    0    0    0    0    pass     
+  #AAO63240.1          AY173958           138      1616    1479      1    +           no      1        0        1      0    0    0    0    0    0    0    0    0    pass     
+  #AAV90743.1          AY819715           157      1656    1500      1    +           no      1        0        6      0    0    0    0    0    0    0    0    0    pass     
 
   # category    num-pass  num-fail  fract-fail
-  # complete         187         0      0.0000
+  # complete         184         0      0.0000
   # incomplete        20         0      0.0000
-  # all              207         0      0.0000
+  # all              204         0      0.0000
   open(IN, $file) || die "ERROR unable to open $file for reading"; 
   push(@file_A, $file);
   $num_Ns_all_ct_H{$file}     = 0;
@@ -149,9 +154,9 @@ while(my $line = <LIST>) {
   while($line = <IN>) { 
     if($line !~ /^\#/) { 
       #AAO63223.1                       no      1    1509        0        2      0    0    0    0    0    0    0    0    pass     
-      if($line =~ /^(\S+)\s+(\S+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\S\s+(\S+)\s+\d\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/)
+      if($line =~ /^(\S+)\s+(\S+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\S\s+(\S+)\s+\d\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/)
       { 
-        my ($paccn, $ntaccn, $incomplete, $num_Ns, $num_oth, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
+        my ($paccn, $ntaccn, $incomplete, $num_Ns, $num_oth, $t1, $t2, $t3, $t4, $t5, $t6, $t7, $t8, $t9) = ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);
         my $outline = ""; # what we'll print to the output files
         my @ntaccn_A = split(",", $ntaccn);
         foreach my $indi_ntaccn (@ntaccn_A) { 
@@ -178,14 +183,15 @@ while(my $line = <LIST>) {
         if($t6 != 0) { $fail_flag = 1; $nfail_t6++; if(defined $t6_fail_file) { print OUTT1 $outline; } }
         if($t7 != 0) { $fail_flag = 1; $nfail_t7++; if(defined $t7_fail_file) { print OUTT1 $outline; } }
         if($t8 != 0) { $fail_flag = 1; $nfail_t8++; if(defined $t8_fail_file) { print OUTT1 $outline; } }
+        if($t9 != 0) { $fail_flag = 1; $nfail_t9++; if(defined $t9_fail_file) { print OUTT1 $outline; } }
         if($fail_flag) { $nfail_any++; if(defined $any_fail_file) { print OUTANY $outline; } }
       }
       else { 
         die "ERROR unable to parse line in $file: $line";
       }
     } # end of 'if($line !~ /^\#/)'
-    if($line =~ /^\# num-fails-incomplete\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/) { 
-      # num-fails-incomplete          yes      -       -        -        -      0    0    0    0    0    0    0    0    N/A
+    if($line =~ /^\# num-fails-incomplete\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/) { 
+      # num-fails-incomplete      0    0    0    0    0    0    0    0    0
       $t1_incomp_ct_H{$file} = $1;
       $t2_incomp_ct_H{$file} = $2;
       $t3_incomp_ct_H{$file} = $3;
@@ -194,9 +200,10 @@ while(my $line = <LIST>) {
       $t6_incomp_ct_H{$file} = $6;
       $t7_incomp_ct_H{$file} = $7;
       $t8_incomp_ct_H{$file} = $8;
+      $t9_incomp_ct_H{$file} = $9;
     }
-    if($line =~ /^\# num-fails-all\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/) { 
-      # num-fails-all                   -      -       -        -        -      0    0    0    0    0    0    0    0    N/A
+    if($line =~ /^\# num-fails-all\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)/) { 
+      # num-fails-all             0    0    0    0    0    0    0    0    0
       $t1_all_ct_H{$file} = $1;
       $t2_all_ct_H{$file} = $2;
       $t3_all_ct_H{$file} = $3;
@@ -205,6 +212,7 @@ while(my $line = <LIST>) {
       $t6_all_ct_H{$file} = $6;
       $t7_all_ct_H{$file} = $7;
       $t8_all_ct_H{$file} = $8;
+      $t9_all_ct_H{$file} = $9;
     }
     if($line =~ m/^\# incomplete\s+(\d+)\s+(\d+)/) { 
       # incomplete        20         0      0.0000
@@ -229,7 +237,7 @@ while(my $line = <LIST>) {
 #             num-pass  num-fail                        T1     T2 
 #  filename   tot inc   tot  inc  num-w-Ns num-w-oth tot inc tot inc ...
 
-  printf("%-*s  %6d %6d  %6d %6d  %9d  %9d  %5d  %5d  %5d  %5d  %5d  %5d  %5d  %5d\n",
+  printf("%-*s  %6d %6d  %6d %6d  %9d  %9d  %5d  %5d  %5d  %5d  %5d  %5d  %5d  %5d  %5d\n",
          $filename_w,
          $file2print, 
          $pass_all_ct_H{$file},    $pass_incomp_ct_H{$file},
@@ -243,7 +251,8 @@ while(my $line = <LIST>) {
          $t5_all_ct_H{$file},      
          $t6_all_ct_H{$file},      
          $t7_all_ct_H{$file},      
-         $t8_all_ct_H{$file});      
+         $t8_all_ct_H{$file},
+         $t9_all_ct_H{$file});      
 
   $pass_all_ct    += $pass_all_ct_H{$file};
   $pass_incomp_ct += $pass_incomp_ct_H{$file};
@@ -251,7 +260,7 @@ while(my $line = <LIST>) {
   $fail_incomp_ct += $fail_incomp_ct_H{$file};
 }
 
-printf("%-*s  %6d %6d  %6d %6d  %9d  %9d  %5d  %5d  %5d  %5d  %5d  %5d  %5d  %5d\n",
+printf("%-*s  %6d %6d  %6d %6d  %9d  %9d  %5d  %5d  %5d  %5d  %5d  %5d  %5d  %5d  %5d\n",
        $filename_w,
        "# total", 
        $pass_all_ct,  $pass_incomp_ct, 
@@ -264,15 +273,16 @@ printf("%-*s  %6d %6d  %6d %6d  %9d  %9d  %5d  %5d  %5d  %5d  %5d  %5d  %5d  %5d
        $nfail_t5, 
        $nfail_t6, 
        $nfail_t7, 
-       $nfail_t8);
+       $nfail_t8, 
+       $nfail_t9); 
 
 print("#\n");
 print("# Explanation of column headings:\n");
-print("# 'num-pass':          'tot': number of gene sequences that pass all tests (T1 through T8); 'inc': subset that are 'incomplete' CDS\n");
-print("# 'num-fail':          'tot': number of gene sequences that fail >=1 test  (T1 through T8); 'inc': subset that are 'incomplete' CDS\n");
+print("# 'num-pass':          'tot': number of gene sequences that pass all tests (T1 through T9); 'inc': subset that are 'incomplete' CDS\n");
+print("# 'num-fail':          'tot': number of gene sequences that fail >=1 test  (T1 through T9); 'inc': subset that are 'incomplete' CDS\n");
 print("# 'num-w-Ns':          total number of gene sequences that have >= 1 'N' ambiguous character\n");
 print("# 'num-w-oth':         total number of gene sequences that have >= 1 non-'N' ambiguous character\n");
-print("# 'T1'..'T<n>'..'T8':  total number of gene sequences that fail test <n>\n");
+print("# 'T1'..'T<n>'..'T9':  total number of gene sequences that fail test <n>\n");
 print("#\n");
 
 foreach my $line (@extra_lines_A) { 
@@ -290,6 +300,7 @@ if(defined $outroot) {
   close(OUTT6);  printf("# Saved list of %4d accessions that failed test 6 to $t6_fail_file\n", $nfail_t6);
   close(OUTT7);  printf("# Saved list of %4d accessions that failed test 7 to $t7_fail_file\n", $nfail_t7);
   close(OUTT8);  printf("# Saved list of %4d accessions that failed test 8 to $t8_fail_file\n", $nfail_t8);
-  close(OUTANY); printf("# Saved list of %4d accessions that failed any of the 8 tests to $any_fail_file\n", $nfail_any);
+  close(OUTT9);  printf("# Saved list of %4d accessions that failed test 9 to $t9_fail_file\n", $nfail_t9);
+  close(OUTANY); printf("# Saved list of %4d accessions that failed any of the 9 tests to $any_fail_file\n", $nfail_any);
 }
 close(LIST);

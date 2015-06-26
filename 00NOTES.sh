@@ -247,5 +247,5 @@ perl esl-test-cds-translate-vs-fetch.pl -incompare sample.cds.compare.fa
 # as this is the default value for codon_start in NCBI annotation.
 #
 ##############################################
-# Last updated: EPN, Thu Jun 25 15:05:02 2015
+# Last updated: EPN, Fri Jun 26 11:54:26 2015
 ##############################################
