@@ -16,7 +16,7 @@ my $outroot     = undef; # changed with -oroot <s>
 &GetOptions( "oroot=s" => \$outroot);
 
 my $usage;
-$usage  = "summarize-esl-test-cds-translate-vs-fetch.pl [OPTIONS] <file with list of multiple esl-test-cds-against input fasta file output from esl-fetch-cds.pl>\n";
+$usage  = "summarize-esl-test-cds-translate-vs-fetch.pl [OPTIONS] <file with list of multiple esl-test-cds-translate-vs-fetch.pl output files>\n";
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t-oroot <s>: output sequences that fail each test to <s>.T<n>.fail-list and seqs that fail any test to <s>.any.fail-list\n";
 
