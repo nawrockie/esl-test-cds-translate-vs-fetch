@@ -22,9 +22,7 @@ use Bio::Easel::SqFile;
 
 my $in_fafile        = "";  # name of input fasta file
 my $idfetch          = "/netopt/ncbi_tools64/bin/idfetch";
-my $nsub             = 6; # number of tests run if -subset used
-my $nall             = 8; # number of total tests
-my $do_subset        = 0; # changed to '1' with -subset, do only first 6 tests, by default do all tests
+my $nall             = 9; # number of total tests
 my $do_all           = 0; # changed to '1' with -a to print all sequences, not just those that fail >= 1 test or have ambig chars
 my $do_verbose       = 0; # changed to '1' with -v, output fetched and translated protein sequences
 my $skip_incompletes = 0; # changed to '1' with -skipinc, output fetched and translated protein sequences
@@ -32,7 +30,6 @@ my $do_compare_input = 0; # changed to '1' with -incompare, input sequences were
 
 &GetOptions( "v"         => \$do_verbose, 
              "a"         => \$do_all, 
-             "subset"    => \$do_subset, 
              "incompare" => \$do_compare_input,
              "skipinc"   => \$skip_incompletes) || die "ERROR unknown option";
 
@@ -41,7 +38,6 @@ $usage  = "esl-test-cds-translate-vs-fetch.pl [OPTIONS] <input fasta file output
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t-v         : be verbose; output translated and fetched protein sequences\n";
 $usage .= "\t\t-a         : print all sequences, even those that pass all tests and have 0 ambig chars\n";
-$usage .= "\t\t-subset    : only perform first six tests, not all eight\n";
 $usage .= "\t\t-incompare : input file was created by dnaorg_compare_genomes.pl -protid -codonstart\n";
 $usage .= "\t\t-skipinc   : skip examination of incomplete CDS'\n";
 
@@ -62,7 +58,7 @@ my $ncomplete        = 0; # number of complete CDS, total
 my $nincomplete      = 0; # number of incomplete CDS, total
 my $ncomplete_fail   = 0; # number of complete CDS that had at least 1 failure
 my $nincomplete_fail = 0; # number of incomplete CDS that had at least 1 failure
-my $last_test = ($do_subset) ? $nsub : $nall;
+my $last_test = $nall;
 my $paccn_w   = length("protein-accession");
 my $ntaccn_w  = length("nt-accession");
 
@@ -88,6 +84,18 @@ for(my $i = 0; $i < $last_test; $i++) {
   $complete_nfail_A[$i]   = 0;
   $incomplete_nfail_A[$i] = 0;
 }
+
+# write the test descriptions:
+push(@testdesc_A, "Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)"); 
+push(@testdesc_A, "Fetched protein starts with an M (or is annot. as incomplete on 5' end)"); 
+push(@testdesc_A, "CDS ends with a stop codon (or is annot. as incomplete on 3' end)"); 
+push(@testdesc_A, "CDS has 0 Ns that make AA assignment ambiguous"); 
+push(@testdesc_A, "Translated CDS and fetched protein are identical length\n#              (ignoring final codon, if it's a stop or incomplete)"); 
+push(@testdesc_A, "Translated CDS and fetched protein are identical sequence\n#              (ignoring hangovers if lengths differ and final codon (if stop) and codons with ambiguous nts)"); 
+push(@testdesc_A, "No internal stops in translated CDS"); 
+push(@testdesc_A, "No internal stops in fetched protein"); 
+push(@testdesc_A, "CDS ends with a stop codon (or is annot. as incomplete on 3' end)"); 
+push(@testdesc_A, "CDS has a linked protein accession"); 
 
 # for each sequence in $in_fafile:
 for(my $i = 0; $i < $nseq; $i++) { 
@@ -166,146 +174,156 @@ for(my $i = 0; $i < $nseq; $i++) {
   # 3. translate the CDS sequence
   my ($prot_translated, $n_N, $n_nonACGTN) = translateDNA($cds_seq, $codon_start);
 
-  # 4. fetch the protein sequence using idfetch
-  # remove 'version' from $paccn
-  my $prot_acconly = $paccn;
-  $prot_acconly =~ s/\.\d+$//;
-  # need to create a temporary file with the accession for idfetch
-  my $tmp_acc_file = "tmp.$prot_acconly.acc";
-  open(OUT, ">" . $tmp_acc_file);
-  print OUT $prot_acconly . "\n";
-  # fetch the sequence
-  my $idfetch_output = `$idfetch -t 5 -c 1 -G $tmp_acc_file`;
-  # remove name and newlines
-  my @idfetch_output_A = split(/\n/, $idfetch_output);
-  my $nlines = scalar(@idfetch_output_A);
+  # 4. fetch the protein sequence using idfetch, if we have an accession that is (rarely, we won't and $paccn eq "-")
+  my @fail_A = (); # '0' if test x failed, else 0
+  my $cds_len_to_translate;
+  my $errmsg = "";
   my $prot_fetched = "";
-  for(my $i = 1; $i < $nlines; $i++) { # skip first
-    if($idfetch_output_A[$i] !~ m/^\>/ && 
-       $idfetch_output_A[$i] =~ m/\w/) { 
-      $prot_fetched .= $idfetch_output_A[$i]
+  if($paccn eq "-") { 
+    # we don't have a protein accession so we can't do any tests, we list them as 'passes', and we fail T9 only
+    for(my $i = 0; $i < $last_test - 1; $i++) { 
+      push(@fail_A, 0); # pass
     }
-  }
-  # remove temp file with accession
-  unlink $tmp_acc_file;
+    push(@fail_A, 1); # fail the final test
+    $cds_len_to_translate = "?";
+  } 
+  else { # $paccn ne "-", fetch it and do the tests
+    # remove 'version' from $paccn
+    my $prot_acconly = $paccn;
+    $prot_acconly =~ s/\.\d+$//;
+    # need to create a temporary file with the accession for idfetch
+    my $tmp_acc_file = "tmp.$prot_acconly.acc";
+    open(OUT, ">" . $tmp_acc_file);
+    print OUT $prot_acconly . "\n";
+    # fetch the sequence
+    my $idfetch_output = `$idfetch -t 5 -c 1 -G $tmp_acc_file`;
+    # remove name and newlines
+    my @idfetch_output_A = split(/\n/, $idfetch_output);
+    my $nlines = scalar(@idfetch_output_A);
+    $prot_fetched = "";
+    for(my $i = 1; $i < $nlines; $i++) { # skip first
+      if($idfetch_output_A[$i] !~ m/^\>/ && 
+         $idfetch_output_A[$i] =~ m/\w/) { 
+        $prot_fetched .= $idfetch_output_A[$i]
+      }
+    }
+    # remove temp file with accession
+    unlink $tmp_acc_file;
     
-  # Test the translated CDS and fetched protein
-  my $cds_len        = length($cds_seq);
-  my $translated_len = length($prot_translated);
-  my $fetched_len    = length($prot_fetched);
-  my @fail_A         = (); # '0' if test x failed, else 0
-  my @translated_A   = split("", $prot_translated); 
-  my @fetched_A      = split("", $prot_fetched);
-  my $errmsg         = "";
-  my $cds_len_to_translate = $cds_len - ($codon_start - 1);
-
-  # Test: Is CDS length divisible by 3? 
-  if($i == 0) { push(@testdesc_A, "Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)"); }
-  if($ic_stop) { 
-    push(@fail_A, 0); # pass
-  }
-  else { 
-    if(($cds_len_to_translate % 3) != 0) { push(@fail_A, 1); } # fail
-    else                                 { push(@fail_A, 0); } # pass
-  }
-
-  # Test: Does fetched protein start with an M (if it's supposed to be complete at start)?
-  if($i == 0) { push(@testdesc_A, "Fetched protein starts with an M (or is annot. as incomplete on 5' end)"); }
-  if($ic_start) { 
-    push(@fail_A, 0); # pass 
-  }
-  else { 
-    if($fetched_A[0] ne "M") { push(@fail_A, 1); } # fail
-    else                     { push(@fail_A, 0); } # pass
-  }
-
-  # Test: Does translated CDS end with a stop codon?
-  if($i == 0) { push(@testdesc_A, "CDS ends with a stop codon (or is annot. as incomplete on 3' end)"); }
-  if($ic_stop) { 
-    push(@fail_A, 0); # pass 
-  }
-  else { 
-    if($translated_A[($translated_len-1)] ne "*") { push(@fail_A, 1); } # fail
-    else                                          { push(@fail_A, 0); } # pass
-  }
-
-  # Test: Are there any nucleotide ambiguities that introduce an AA ambiguity?
-  if($i == 0) { push(@testdesc_A, "CDS has 0 Ns that make AA assignment ambiguous"); }
-  my $nambig_aa = 0;
-  for(my $p = 0; $p < $translated_len; $p++) { 
-    if($translated_A[$p] eq "?") { 
-      $nambig_aa++;
+    # Test the translated CDS and fetched protein
+    my $cds_len        = length($cds_seq);
+    my $translated_len = length($prot_translated);
+    my $fetched_len    = length($prot_fetched);
+    my @translated_A   = split("", $prot_translated); 
+    my @fetched_A      = split("", $prot_fetched);
+    $cds_len_to_translate = $cds_len - ($codon_start - 1);
+    
+    # Test: Is CDS length divisible by 3? 
+    if($ic_stop) { 
+      push(@fail_A, 0); # pass
     }
-  }
-  if($nambig_aa > 0) { push(@fail_A, 1); } # fail
-  else               { push(@fail_A, 0); } # pass
-
-  # Test: Do the protein lengths match?
-  if($i == 0) { push(@testdesc_A, "Translated CDS and fetched protein are identical length\n#              (ignoring final codon, if it's a stop or incomplete)"); }
-  if(($translated_A[($translated_len-1)] eq "*") || # CDS ended with a stop codon
-     ($translated_A[($translated_len-1)] eq "~")) { # CDS ended with a partial codon
-    if(($translated_len-1) != $fetched_len) { push(@fail_A, 1); } # fail
-    else                                    { push(@fail_A, 0); } # pass
-  }
-  else { # CDS does not end with a stop codon or partial codon
-    if($translated_len != $fetched_len) { push(@fail_A, 1); } # fail
-    else                                { push(@fail_A, 0); } # pass
-  }
-
-  # Test: Are there any mismatches between translated CDS and fetched protein?
-  if($i == 0) { push(@testdesc_A, "Translated CDS and fetched protein are identical sequence\n#              (ignoring hangovers if lengths differ and final codon (if stop) and codons with ambiguous nts)"); }
-  my $min_len      = ($fetched_len < $translated_len) ? $fetched_len : $translated_len;
-  my $nmismatch       = 0;
-  my $nambig_mismatch = 0;
-  for(my $p = 0; $p < $min_len; $p++) { 
-    if($translated_A[$p] ne $fetched_A[$p]) { 
-      if(($p == 0) && ($fetched_A[$p] eq "M")) { # we allow this
-        ;
-      }
-      elsif(($translated_A[$p] eq "*") && ($fetched_A[$p] eq "X")) { # we allow this
-        ;
-      }
-      elsif($translated_A[$p] eq "?") { 
-        $nambig_mismatch++;
-      }
-      else { 
-        $nmismatch++;
-        if($errmsg ne "") { $errmsg .= "; "; }
-        $errmsg .= sprintf("position %d mismatch %s ne %s (translated ne fetched)", $p+1, $translated_A[$p], $fetched_A[$p]);
-        if($do_verbose) { print $paccn . " " . $errmsg . "\n"; }
+    else { 
+      if(($cds_len_to_translate % 3) != 0) { push(@fail_A, 1); } # fail
+      else                                 { push(@fail_A, 0); } # pass
+    }
+    
+    # Test: Does fetched protein start with an M (if it's supposed to be complete at start)?
+    if($ic_start) { 
+      push(@fail_A, 0); # pass 
+    }
+    else { 
+      if($fetched_A[0] ne "M") { push(@fail_A, 1); } # fail
+      else                     { push(@fail_A, 0); } # pass
+    }
+    
+    # Test: Does translated CDS end with a stop codon?
+    if($ic_stop) { 
+      push(@fail_A, 0); # pass 
+    }
+    else { 
+      if($translated_A[($translated_len-1)] ne "*") { push(@fail_A, 1); } # fail
+      else                                          { push(@fail_A, 0); } # pass
+    }
+    
+    # Test: Are there any nucleotide ambiguities that introduce an AA ambiguity?
+    my $nambig_aa = 0;
+    for(my $p = 0; $p < $translated_len; $p++) { 
+      if($translated_A[$p] eq "?") { 
+        $nambig_aa++;
       }
     }
-  }
-  if($nmismatch > 0) { push(@fail_A, 1); } # fail
-  else               { push(@fail_A, 0); } # pass
-
-  # Test: Are there any internal stop codons in the translated CDS?
-  if($i == 0) { push(@testdesc_A, "No internal stops in translated CDS"); }
-  my $nintstop_translated = 0;
-  for(my $p = 0; $p < ($translated_len-1); $p++) { 
-    if($translated_A[$p] eq "*") { 
-      $nintstop_translated++;
+    if($nambig_aa > 0) { push(@fail_A, 1); } # fail
+    else               { push(@fail_A, 0); } # pass
+    
+    # Test: Do the protein lengths match?
+    if(($translated_A[($translated_len-1)] eq "*") || # CDS ended with a stop codon
+       ($translated_A[($translated_len-1)] eq "~")) { # CDS ended with a partial codon
+      if(($translated_len-1) != $fetched_len) { push(@fail_A, 1); } # fail
+      else                                    { push(@fail_A, 0); } # pass
     }
-  }
-  if($nintstop_translated > 0) { push(@fail_A, 1); } # fail
-  else                         { push(@fail_A, 0); } # pass
-
-  # Test: Are there any internal stop codons in the fetched protein?
-  if($i == 0) { push(@testdesc_A, "No internal stops in fetched protein"); }
-  my $nintstop_fetched = 0;
-  for(my $p = 0; $p < ($fetched_len-1); $p++) { 
-    if($fetched_A[$p] eq "*") { 
-      $nintstop_fetched++;
+    else { # CDS does not end with a stop codon or partial codon
+      if($translated_len != $fetched_len) { push(@fail_A, 1); } # fail
+      else                                { push(@fail_A, 0); } # pass
     }
-  }
-  if($nintstop_fetched > 0) { push(@fail_A, 1); } # fail
-  else                      { push(@fail_A, 0); } # pass
+    
+    # Test: Are there any mismatches between translated CDS and fetched protein?
+    my $min_len      = ($fetched_len < $translated_len) ? $fetched_len : $translated_len;
+    my $nmismatch       = 0;
+    my $nambig_mismatch = 0;
+    for(my $p = 0; $p < $min_len; $p++) { 
+      if($translated_A[$p] ne $fetched_A[$p]) { 
+        if(($p == 0) && ($fetched_A[$p] eq "M")) { # we allow this
+          ;
+        }
+        elsif(($translated_A[$p] eq "*") && ($fetched_A[$p] eq "X")) { # we allow this
+          ;
+        }
+        elsif($translated_A[$p] eq "?") { 
+          $nambig_mismatch++;
+        }
+        else { 
+          $nmismatch++;
+          if($errmsg ne "") { $errmsg .= "; "; }
+          $errmsg .= sprintf("position %d mismatch %s ne %s (translated ne fetched)", $p+1, $translated_A[$p], $fetched_A[$p]);
+          if($do_verbose) { print $paccn . " " . $errmsg . "\n"; }
+        }
+      }
+    }
+    if($nmismatch > 0) { push(@fail_A, 1); } # fail
+    else               { push(@fail_A, 0); } # pass
+
+    # Test: Are there any internal stop codons in the translated CDS?
+    my $nintstop_translated = 0;
+    for(my $p = 0; $p < ($translated_len-1); $p++) { 
+      if($translated_A[$p] eq "*") { 
+        $nintstop_translated++;
+      }
+    }
+    if($nintstop_translated > 0) { push(@fail_A, 1); } # fail
+    else                         { push(@fail_A, 0); } # pass
+
+    # Test: Are there any internal stop codons in the fetched protein?
+    my $nintstop_fetched = 0;
+    for(my $p = 0; $p < ($fetched_len-1); $p++) { 
+      if($fetched_A[$p] eq "*") { 
+        $nintstop_fetched++;
+      }
+    }
+    if($nintstop_fetched > 0) { push(@fail_A, 1); } # fail
+    else                      { push(@fail_A, 0); } # pass
 
 # NOT CURRENTLY DOING THIS TEST:
 #  # Test: Does translated CDS start with an M? 
 #  if($i == 0) { push(@testdesc_A, "Translated CDS starts with an M"); }
 #  if($translated_A[0] ne "M") { push(@fail_A, 1); } # fail
 #  else                        { push(@fail_A, 0); } # pass
+
+    # Test: do we have a valid protein accession? if we get to this
+    # part of the code, we do:
+    push(@fail_A, 0); # pass
+
+  } # end of 'else' entered if we have a valid protein accesions ($paccn ne "-") 
+
 
   # store output for to print later
   my $any_fails = 0;
