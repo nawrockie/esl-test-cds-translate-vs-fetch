@@ -205,31 +205,53 @@ perl esl-test-cds-translate-vs-fetch.pl -subset -incompare sample.cds.compare.fa
 # Related "helper" scripts
 ##########################
 # The git repository that includes this script 
+#
+# https://github.com/nawrockie/esl-test-cds-translate-vs-fetch.git
+#
+# also includes:
 # 
-# This script takes as input fasta files created by esl-fetch-cds.pl.
-#
-# Expected input:
-# If esl-fetch-cds.pl was run in default mode with a particular format
-# of input file. Those sequences will be
-# named something like the ones in the sample input file in this
-# dir 'sample.cds.in'. For example,
-#
-# >AAH45158.1:codon_start1:BC045158.1:4:870:+:
+# summarize-esl-test-cds-translate-vs-fetch.pl
 # 
-# Tokens are delimited by ':'. The first is simply from the input
-# file, as explained below. The second indicates the position of the
-# first nucleotide to be translated as the single digit after the
-# string 'codon_start'. Usually this is 1, meaning the first nt is
-# translated. If it is 2, it means the first nucleotide is *not*
-# translated and the second nucleotide is the first one to be
-# translated. The only other valid value is 3. Tokens 3 to N come
-# in sets of 4. The first in each set gives a nucleotide accession
-# that encodes a segment (i.e. exon) of the CDS, followed by the
-# start position, then the stop, then the strand. So in this 
-# example the protein AAH45158.1 is encoded by BC045158.1 from
-# positions 4 to 870 on the positive strand.
+# Which takes as input a file that lists output files from esl-test-cds-translate-vs-fetch.pl
+# and 'summarizes' them.
 #
+# Here's the usage:
+# summarize-esl-test-cds-translate-vs-fetch.pl [OPTIONS] <file with list of multiple esl-test-cds-translate-vs-fetch.pl output files>
+#	OPTIONS:
+#		-oroot <s>: output sequences that fail each test to <s>.T<n>.fail-list and seqs that fail any test to <s>.any.fail-list
+#		-subset:    esl-test-cds-translate-vs-fetch was run with the -subset option
 #
+# And here's an example run:
+#
+perl summarize-esl-test-cds-translate-vs-fetch.pl sample.cds-test.list 
+#                                                                     num-pass       num-fail
+# OUTPUT:
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## filename                                                          tot    inc     tot    inc   num-w-Ns  num-w-oth     T1     T2     T3     T4     T5     T6     T7     T8     T9    T10    T11
+#sample.cds.cds-test                                                   1      0       3      2          0          0      0      0      0      0      0      1      0      0      0      1      1
+#sample2.cds.cds-test                                                184      0      20     20          3         17      0      0      0      0      0      0      0      0      0     20      0
+## total                                                             185      0      23     22          3         17      0      0      0      0      0      1      0      0      0      0      0
+##
+## Explanation of column headings:
+## 'num-pass':          'tot': number of gene sequences that pass all tests (T1 through T11); 'inc': subset that are 'incomplete' CDS
+## 'num-fail':          'tot': number of gene sequences that fail >=1 test  (T1 through T11); 'inc': subset that are 'incomplete' CDS
+## 'num-w-Ns':          total number of gene sequences that have >= 1 'N' ambiguous character
+## 'num-w-oth':         total number of gene sequences that have >= 1 non-'N' ambiguous character
+## 'T1'..'T<n>'..'T11':  total number of gene sequences that fail test <n>
+##
+## Test 1 (T1): Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)
+## Test 2 (T2): Fetched protein starts with an M (or is annot. as incomplete on 5' end)
+## Test 3 (T3): CDS ends with a stop codon (or is annot. as incomplete on 3' end)
+## Test 4 (T4): CDS has 0 Ns that make AA assignment ambiguous
+## Test 5 (T5): Translated CDS and fetched protein are identical length
+## Test 6 (T6): Translated CDS and fetched protein are identical sequence
+## Test 7 (T7): No internal stops in translated CDS
+## Test 8 (T8): No internal stops in fetched protein
+## Test 9 (T9): CDS has a linked protein accession
+## Test 10 (T10): CDS is complete on the 5' end (not annotated as incomplete on 5' end)
+## Test 11 (T11): CDS is complete on the 3' end (not annotated as incomplete on 3' end)#
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## 
 #############
 # Input files
 #############
