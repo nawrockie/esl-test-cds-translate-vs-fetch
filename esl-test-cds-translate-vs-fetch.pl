@@ -22,15 +22,18 @@ use Bio::Easel::SqFile;
 
 my $in_fafile        = "";  # name of input fasta file
 my $idfetch          = "/netopt/ncbi_tools64/bin/idfetch";
-my $nall             = 9; # number of total tests
-my $do_all           = 0; # changed to '1' with -a to print all sequences, not just those that fail >= 1 test or have ambig chars
-my $do_verbose       = 0; # changed to '1' with -v, output fetched and translated protein sequences
-my $skip_incompletes = 0; # changed to '1' with -skipinc, output fetched and translated protein sequences
-my $do_compare_input = 0; # changed to '1' with -incompare, input sequences were created by dnaorg_compare_genomes.pl
+my $nall             = 11; # number of total tests
+my $nsubset          = 9;  # number of tests run if -subset is used
+my $do_all           = 0;  # changed to '1' with -a to print all sequences, not just those that fail >= 1 test or have ambig chars
+my $do_verbose       = 0;  # changed to '1' with -v, output fetched and translated protein sequences
+my $skip_incompletes = 0;  # changed to '1' with -skipinc, output fetched and translated protein sequences
+my $do_subset        = 0;  # changed to '1' with -subset, run only first $nsubset tests instead of all $nall
+my $do_compare_input = 0;  # changed to '1' with -incompare, input sequences were created by dnaorg_compare_genomes.pl
 
 &GetOptions( "v"         => \$do_verbose, 
              "a"         => \$do_all, 
              "incompare" => \$do_compare_input,
+             "subset"    => \$do_subset,
              "skipinc"   => \$skip_incompletes) || die "ERROR unknown option";
 
 my $usage;
@@ -38,6 +41,7 @@ $usage  = "esl-test-cds-translate-vs-fetch.pl [OPTIONS] <input fasta file output
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t-v         : be verbose; output translated and fetched protein sequences\n";
 $usage .= "\t\t-a         : print all sequences, even those that pass all tests and have 0 ambig chars\n";
+$usage .= "\t\t-subset    : run only the first $nsubset tests, not all $nall\n";
 $usage .= "\t\t-incompare : input file was created by dnaorg_compare_genomes.pl -protid -codonstart\n";
 $usage .= "\t\t-skipinc   : skip examination of incomplete CDS'\n";
 
@@ -58,7 +62,7 @@ my $ncomplete        = 0; # number of complete CDS, total
 my $nincomplete      = 0; # number of incomplete CDS, total
 my $ncomplete_fail   = 0; # number of complete CDS that had at least 1 failure
 my $nincomplete_fail = 0; # number of incomplete CDS that had at least 1 failure
-my $last_test = $nall;
+my $last_test = ($do_subset) ? $nsubset : $nall;
 my $paccn_w   = length("protein-accession");
 my $ntaccn_w  = length("nt-accession");
 
@@ -95,6 +99,8 @@ push(@testdesc_A, "Translated CDS and fetched protein are identical sequence\n# 
 push(@testdesc_A, "No internal stops in translated CDS"); 
 push(@testdesc_A, "No internal stops in fetched protein"); 
 push(@testdesc_A, "CDS has a linked protein accession"); 
+push(@testdesc_A, "CDS is complete on the 5' end (not annotated as incomplete on 5' end)");
+push(@testdesc_A, "CDS is complete on the 3' end (not annotated as incomplete on 3' end)");
 
 # for each sequence in $in_fafile:
 for(my $i = 0; $i < $nseq; $i++) { 
@@ -310,15 +316,17 @@ for(my $i = 0; $i < $nseq; $i++) {
   if($paccn ne "-" && $nintstop_fetched > 0) { push(@fail_A, 1); } # fail
   else                                       { push(@fail_A, 0); } # pass
 
-# NOT CURRENTLY DOING THIS TEST:
-#  # Test: Does translated CDS start with an M? 
-#  if($i == 0) { push(@testdesc_A, "Translated CDS starts with an M"); }
-#  if($translated_A[0] ne "M") { push(@fail_A, 1); } # fail
-#  else                        { push(@fail_A, 0); } # pass
-
   # Test: do we have a valid protein accession? 
   if($paccn eq "-") { push(@fail_A, 1); } # fail
   else              { push(@fail_A, 0); } # pass
+
+  # Test: are we complete on 5' end?
+  if($ic_start) { push(@fail_A, 1); } # fail
+  else          { push(@fail_A, 0); } # pass
+
+  # Test: are we complete on 3' end?
+  if($ic_stop) { push(@fail_A, 1); } # fail
+  else         { push(@fail_A, 0); } # pass
 
   # store output for to print later
   my $any_fails = 0;
@@ -379,7 +387,7 @@ my $header_line = sprintf("%-*s  %-*s  %8s  %8s  %6s  %5s  %3s  %11s  %5s  %7s  
 for(my $i = 0; $i < $last_test; $i++) { 
   $header_line .= sprintf("   T%d", ($i+1)); 
 }
-$header_line .= "    pass/fail\n";
+$header_line .= "  pass/fail\n";
 
 # print output, first complete CDS, then incomplete
 if(scalar(@c_toprint_A) > 0) { 

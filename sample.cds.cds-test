@@ -1,0 +1,52 @@
+# Complete CDS:
+#protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11  pass/fail
+AAH45158.1          BC045158.1           4       870     867      1    +           no      1        0        0      0    0    0    0    0    1    0    0    0    0    0    fail      # position 241 mismatch A ne P (translated ne fetched)
+#
+# Incomplete CDS: (incomplete start, complete stop)
+#protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11  pass/fail
+AFJ92633.1          JQ690867.1           1       400     399      1    +   yes(start)      2        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+#
+# Incomplete CDS (complete start, incomplete stop):
+#protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11  pass/fail
+BAJ21116.1          AB590961.1          10       891     882      1    +    yes(stop)      1        0        0      0    0    0    0    0    0    0    0    0    0    1    fail     
+#
+#
+# Summary:
+#
+# category                 T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11
+# num-fails-complete        0    0    0    0    0    1    0    0    0    0    0
+# num-fails-incomplete      0    0    0    0    0    0    0    0    0    1    1
+# num-fails-all             0    0    0    0    0    1    0    0    0    1    1
+#
+# category    num-pass  num-fail  fract-fail
+# complete           1         1      0.5000
+# incomplete         0         2      1.0000
+# all                1         3      0.7500
+#
+# A '0' in a T<n> column above indicates the sequence 'passed' the test.
+# A '1' in a T<n> column above indicates the sequence 'failed' the test.
+#
+# Only data for sequences that fail >= 1 test OR have an ambiguous nucleotide in them are printed [change to all seqs with -a]
+#
+# Test 1 (T1): Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)
+# Test 2 (T2): Fetched protein starts with an M (or is annot. as incomplete on 5' end)
+# Test 3 (T3): CDS ends with a stop codon (or is annot. as incomplete on 3' end)
+# Test 4 (T4): CDS has 0 Ns that make AA assignment ambiguous
+# Test 5 (T5): Translated CDS and fetched protein are identical length
+#              (ignoring final codon, if it's a stop or incomplete)
+# Test 6 (T6): Translated CDS and fetched protein are identical sequence
+#              (ignoring hangovers if lengths differ and final codon (if stop) and codons with ambiguous nts)
+# Test 7 (T7): No internal stops in translated CDS
+# Test 8 (T8): No internal stops in fetched protein
+# Test 9 (T9): CDS has a linked protein accession
+# Test 10 (T10): CDS is complete on the 5' end (not annotated as incomplete on 5' end)
+# Test 11 (T11): CDS is complete on the 3' end (not annotated as incomplete on 3' end)
+#
+# Other non-obvious column meanings:
+# "start":     codon_start annotation, CDS translation begins at this position of CDS (usually 1)
+# "tr-len":    length of CDS to be translated (annotated length - (codon_start - 1))
+# "num-Ns":    number of N nucleotides in the CDS sequence
+# "num-oth":   number of other ambiguous nucleotides (non-N, non-ACGT) in the CDS sequence
+# "pass/fail": 'pass' if all tests pass (have 0s in their respective columns), else 'fail'
+#
+#[ok]

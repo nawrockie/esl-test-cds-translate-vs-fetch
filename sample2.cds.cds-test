@@ -1,0 +1,77 @@
+# Complete CDS:
+#protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11  pass/fail
+AAO63223.1          AY173956            37      1545    1509      1    +           no      1        0        2      0    0    0    0    0    0    0    0    0    0    0    pass     
+AAO63240.1          AY173958           138      1616    1479      1    +           no      1        0        1      0    0    0    0    0    0    0    0    0    0    0    pass     
+AAV90743.1          AY819715           157      1656    1500      1    +           no      1        0        6      0    0    0    0    0    0    0    0    0    0    0    pass     
+ABK58244.1          DQ912823           160      1674    1515      1    +           no      1        0        1      0    0    0    0    0    0    0    0    0    0    0    pass     
+ABV00792.1          EF514708           158      1669    1512      1    +           no      1        0        2      0    0    0    0    0    0    0    0    0    0    0    pass     
+ABV00833.1          EF514713           159      1658    1500      1    +           no      1        0        1      0    0    0    0    0    0    0    0    0    0    0    pass     
+ACF21598.1          EU446022           135      1592    1458      1    +           no      1        1        0      0    0    0    0    0    0    0    0    0    0    0    pass     
+ACX45017.1          FJ623476             2      1489    1488      1    +           no      1        0        1      0    0    0    0    0    0    0    0    0    0    0    pass     
+ACX45124.1          FJ623488             2      1513    1512      1    +           no      1        0        1      0    0    0    0    0    0    0    0    0    0    0    pass     
+ADV58212.1          HM469979           790      2298    1509      1    +           no      1        0        1      0    0    0    0    0    0    0    0    0    0    0    pass     
+ADV58246.1          HM469983           789      2300    1512      1    +           no      1        0       12      0    0    0    0    0    0    0    0    0    0    0    pass     
+#
+# Incomplete CDS: (incomplete start, complete stop)
+#protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11  pass/fail
+AAK59204.1          AF377958             1      1476    1476      1    +   yes(start)      1        0        1      0    0    0    0    0    0    0    0    0    1    0    fail     
+AAM67393.1          AY093605          1290      4298    3009      1    +   yes(start)      1        0        9      0    0    0    0    0    0    0    0    0    1    0    fail     
+AAO47199.1          AY169814          1571      4609    3039      1    +   yes(start)      1        0       42      0    0    0    0    0    0    0    0    0    1    0    fail     
+AAR27673.1          AY463225          1518      4517    3000      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+AAR27773.1          AY463237          1517      4516    3000      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+AAV59698.1          AY771590             1      1457    1455      1    +   yes(start)      3        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+AAY32399.1          DQ011172          1510      4530    3021      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+AAY98542.1          DQ093585          1505      2491     987      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+ABC68945.1          DQ230841          1415      4393    2979      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+ACJ37051.1          EU786671          1523      4534    3012      1    +   yes(start)      1        0        1      0    0    0    0    0    0    0    0    0    1    0    fail     
+ACJ37096.1          EU786677          1520      4534    3015      1    +   yes(start)      1        0       10      0    0    0    0    0    0    0    0    0    1    0    fail     
+ACY70068.1          FJ670524          1552      4563    3012      1    +   yes(start)      1        0        2      0    0    0    0    0    0    0    0    0    1    0    fail     
+ADF97415.1          GU595155          1741      4749    3009      1    +   yes(start)      1        1       20      0    0    0    0    0    0    0    0    0    1    0    fail     
+AFI79216.1          JF804805          1446      4457    3012      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+AFI79224.1          JF804806          1323      4355    3033      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+AFI79246.1          JF804809          1307      4318    3012      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+AFI79266.1          JF804812          1434      4454    3021      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+AFI79281.1          JF804814          1221      4232    3012      1    +   yes(start)      1        1        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+AFK29827.1          JN860764          1291      4302    3012      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+AAC63080.1          U88823            1690      4428    2739      1    +   yes(start)      1        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+#
+#
+# Summary:
+#
+# category                 T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11
+# num-fails-complete        0    0    0    0    0    0    0    0    0    0    0
+# num-fails-incomplete      0    0    0    0    0    0    0    0    0   20    0
+# num-fails-all             0    0    0    0    0    0    0    0    0   20    0
+#
+# category    num-pass  num-fail  fract-fail
+# complete         184         0      0.0000
+# incomplete         0        20      1.0000
+# all              184        20      0.0980
+#
+# A '0' in a T<n> column above indicates the sequence 'passed' the test.
+# A '1' in a T<n> column above indicates the sequence 'failed' the test.
+#
+# Only data for sequences that fail >= 1 test OR have an ambiguous nucleotide in them are printed [change to all seqs with -a]
+#
+# Test 1 (T1): Length of CDS (DNA) is a multiple of 3 (or stop is incomplete)
+# Test 2 (T2): Fetched protein starts with an M (or is annot. as incomplete on 5' end)
+# Test 3 (T3): CDS ends with a stop codon (or is annot. as incomplete on 3' end)
+# Test 4 (T4): CDS has 0 Ns that make AA assignment ambiguous
+# Test 5 (T5): Translated CDS and fetched protein are identical length
+#              (ignoring final codon, if it's a stop or incomplete)
+# Test 6 (T6): Translated CDS and fetched protein are identical sequence
+#              (ignoring hangovers if lengths differ and final codon (if stop) and codons with ambiguous nts)
+# Test 7 (T7): No internal stops in translated CDS
+# Test 8 (T8): No internal stops in fetched protein
+# Test 9 (T9): CDS has a linked protein accession
+# Test 10 (T10): CDS is complete on the 5' end (not annotated as incomplete on 5' end)
+# Test 11 (T11): CDS is complete on the 3' end (not annotated as incomplete on 3' end)
+#
+# Other non-obvious column meanings:
+# "start":     codon_start annotation, CDS translation begins at this position of CDS (usually 1)
+# "tr-len":    length of CDS to be translated (annotated length - (codon_start - 1))
+# "num-Ns":    number of N nucleotides in the CDS sequence
+# "num-oth":   number of other ambiguous nucleotides (non-N, non-ACGT) in the CDS sequence
+# "pass/fail": 'pass' if all tests pass (have 0s in their respective columns), else 'fail'
+#
+#[ok]

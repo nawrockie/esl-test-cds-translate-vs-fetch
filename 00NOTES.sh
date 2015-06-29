@@ -42,7 +42,7 @@ source /panfs/pan1/dnaorg/programs/setup-bio-easel.csh.sh
 #	OPTIONS:
 #		-v         : be verbose; output translated and fetched protein sequences
 #		-a         : print all sequences, even those that pass all tests and have 0 ambig chars
-#		-subset    : only perform first six tests, not all eight
+#		-subset    : run only the first 9 tests, not all 11
 #		-incompare : input file was created by dnaorg_compare_genomes.pl -protid -codonstart
 #		-skipinc   : skip examination of incomplete CDS'
 #
@@ -55,21 +55,29 @@ perl esl-test-cds-translate-vs-fetch.pl sample.cds.fa
 # Output:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## Complete CDS:
-##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9    pass/fail
-#AAH45158.1          BC045158.1           4       870     867      1    +           no      1        0        0      0    0    0    0    0    1    0    0    0    fail      # position 241 mismatch A ne P (translated ne fetched)
+##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11  pass/fail
+#AAH45158.1          BC045158.1           4       870     867      1    +           no      1        0        0      0    0    0    0    0    1    0    0    0    0    0    fail      # position 241 mismatch A ne P (translated ne fetched)
+##
+## Incomplete CDS: (incomplete start, complete stop)
+##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11  pass/fail
+#AFJ92633.1          JQ690867.1           1       400     399      1    +   yes(start)      2        0        0      0    0    0    0    0    0    0    0    0    1    0    fail     
+##
+## Incomplete CDS (complete start, incomplete stop):
+##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11  pass/fail
+#BAJ21116.1          AB590961.1          10       891     882      1    +    yes(stop)      1        0        0      0    0    0    0    0    0    0    0    0    0    1    fail     
 ##
 ##
 ## Summary:
 ##
-## category                 T1   T2   T3   T4   T5   T6   T7   T8   T9
-## num-fails-complete        0    0    0    0    0    1    0    0    0
-## num-fails-incomplete      0    0    0    0    0    0    0    0    0
-## num-fails-all             0    0    0    0    0    1    0    0    0
+## category                 T1   T2   T3   T4   T5   T6   T7   T8   T9   T10   T11
+## num-fails-complete        0    0    0    0    0    1    0    0    0    0    0
+## num-fails-incomplete      0    0    0    0    0    0    0    0    0    1    1
+## num-fails-all             0    0    0    0    0    1    0    0    0    1    1
 ##
 ## category    num-pass  num-fail  fract-fail
 ## complete           1         1      0.5000
-## incomplete         2         0      0.0000
-## all                3         1      0.2500
+## incomplete         0         2      1.0000
+## all                1         3      0.7500
 ##
 ## A '0' in a T<n> column above indicates the sequence 'passed' the test.
 ## A '1' in a T<n> column above indicates the sequence 'failed' the test.
@@ -87,6 +95,8 @@ perl esl-test-cds-translate-vs-fetch.pl sample.cds.fa
 ## Test 7 (T7): No internal stops in translated CDS
 ## Test 8 (T8): No internal stops in fetched protein
 ## Test 9 (T9): CDS has a linked protein accession
+## Test 10 (T10): CDS is complete on the 5' end (not annotated as incomplete on 5' end)
+## Test 11 (T11): CDS is complete on the 3' end (not annotated as incomplete on 3' end)
 ##
 ## Other non-obvious column meanings:
 ## "start":     codon_start annotation, CDS translation begins at this position of CDS (usually 1)
@@ -115,15 +125,19 @@ perl esl-test-cds-translate-vs-fetch.pl sample.cds.fa
 # using the options -protid and -codonstart with
 # dnaorg_compare_genomes.pl.  Those fasta files have a special naming
 # convention format that requires special processing to check the CDS.
+# The user may want to also use the -subset option with -incompare, which
+# restricts the set of tests performed to the first 9, excluding the 
+# final 2 which test if the sequences is incomplete on the 5' and/or 3'
+# end.
 # 
 # Here is an example of running the script on those files:
 #
-perl esl-test-cds-translate-vs-fetch.pl -incompare sample.cds.compare.fa
+perl esl-test-cds-translate-vs-fetch.pl -subset -incompare sample.cds.compare.fa
 #
 # Output:
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## Complete CDS:
-##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9    pass/fail
+##protein-accession  nt-accession  mincoord  maxcoord  tr-len  nexon  str  incomplete?  start   num-Ns  num-oth     T1   T2   T3   T4   T5   T6   T7   T8   T9  pass/fail
 #BAF36015.1          AB246335             1      3221    1203      2    +           no      1        0        1      0    0    0    0    0    0    0    0    0    pass     
 #BAM75936.1          AB674404           155       802     648      1    +           no      1        0        2      0    0    0    0    0    0    0    0    0    pass     
 #BAM76062.1          AB674437           122       802     681      1    +           no      1        0        1      0    0    0    0    0    0    0    0    0    pass     
@@ -186,7 +200,35 @@ perl esl-test-cds-translate-vs-fetch.pl -incompare sample.cds.compare.fa
 ## "pass/fail": 'pass' if all tests pass (have 0s in their respective columns), else 'fail'
 ##
 ##[ok]
-#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+##########################
+# Related "helper" scripts
+##########################
+# The git repository that includes this script 
+# 
+# This script takes as input fasta files created by esl-fetch-cds.pl.
+#
+# Expected input:
+# If esl-fetch-cds.pl was run in default mode with a particular format
+# of input file. Those sequences will be
+# named something like the ones in the sample input file in this
+# dir 'sample.cds.in'. For example,
+#
+# >AAH45158.1:codon_start1:BC045158.1:4:870:+:
+# 
+# Tokens are delimited by ':'. The first is simply from the input
+# file, as explained below. The second indicates the position of the
+# first nucleotide to be translated as the single digit after the
+# string 'codon_start'. Usually this is 1, meaning the first nt is
+# translated. If it is 2, it means the first nucleotide is *not*
+# translated and the second nucleotide is the first one to be
+# translated. The only other valid value is 3. Tokens 3 to N come
+# in sets of 4. The first in each set gives a nucleotide accession
+# that encodes a segment (i.e. exon) of the CDS, followed by the
+# start position, then the stop, then the strand. So in this 
+# example the protein AAH45158.1 is encoded by BC045158.1 from
+# positions 4 to 870 on the positive strand.
+#
 #
 #############
 # Input files
@@ -247,5 +289,5 @@ perl esl-test-cds-translate-vs-fetch.pl -incompare sample.cds.compare.fa
 # as this is the default value for codon_start in NCBI annotation.
 #
 ##############################################
-# Last updated: EPN, Fri Jun 26 11:54:26 2015
+# Last updated: EPN, Mon Jun 29 14:56:17 2015
 ##############################################
