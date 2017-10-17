@@ -37,6 +37,8 @@ my $do_compare_input = 0;  # changed to '1' with -incompare, input sequences wer
              "skipinc"   => \$skip_incompletes) || die "ERROR unknown option";
 
 my $usage;
+$usage  = "esl-test-cds-translate-vs-fetch.pl v0.01\n\n";
+$usage  = "Usage:\n";
 $usage  = "esl-test-cds-translate-vs-fetch.pl [OPTIONS] <input fasta file output from esl-fetch-cds.pl>\n";
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t-v         : be verbose; output translated and fetched protein sequences\n";

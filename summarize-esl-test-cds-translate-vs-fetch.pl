@@ -21,7 +21,9 @@ my $nsubset     = 9;  # number of tests run if -subset is used
              "subset"  => \$do_subset);
 
 my $usage;
-$usage  = "summarize-esl-test-cds-translate-vs-fetch.pl [OPTIONS] <file with list of multiple esl-test-cds-translate-vs-fetch.pl output files>\n";
+$usage  = "summarize-esl-test-cds-translate-vs-fetch.pl v0.01\n\n";
+$usage .= "Usage:\n";
+$usage .= "summarize-esl-test-cds-translate-vs-fetch.pl [OPTIONS] <file with list of multiple esl-test-cds-translate-vs-fetch.pl output files>\n";
 $usage .= "\tOPTIONS:\n";
 $usage .= "\t\t-oroot <s>: output sequences that fail each test to <s>.T<n>.fail-list and seqs that fail any test to <s>.any.fail-list\n";
 $usage .= "\t\t-subset:    esl-test-cds-translate-vs-fetch was run with the -subset option\n";
